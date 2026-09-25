@@ -13,6 +13,7 @@
     "sync": "node -e \"import('./server/syncEngine.js').then(m => m.triggerSync())\""
   },
   "dependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
     "chart.js": "^4.4.8",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -26,15 +27,14 @@
     "react": "^18.3.1",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^18.3.1",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "vite": "^6.1.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
-    "@vitejs/plugin-react": "^4.3.4",
     "concurrently": "^9.1.2",
-    "nodemon": "^3.1.9",
-    "vite": "^6.1.0"
+    "nodemon": "^3.1.9"
   },
   "engines": {
     "node": ">=18.0.0"
