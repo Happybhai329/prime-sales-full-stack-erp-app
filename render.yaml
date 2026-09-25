@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: prime-sales-management-app
+    env: node
+    plan: starter
+    region: singapore
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false
+      - key: ADMISSION_DB_ID
+        value: 1StEreMtS9_mbt4Np-T0J4WK5ILwDqyxmtqwxw8ZebOA
+      - key: INQUIRY_DB_ID
+        value: 1Ddk1iVPuvYJehDIh3HRIIqqdc2QwJiGoq0LLmp4R_7c
+      - key: VOUCHER_FOLDER_ID
+        value: 1kfTAPzMOi8wM8o4AmgUrbQm8AqTAH7cN
+      - key: VOUCHER_LOGO_DRIVE_FILE_ID
+        value: 1esJQL-6fNQRAHdd9NWQB0lgTP7xyTx3r
+      - key: GOOGLE_SERVICE_ACCOUNT_EMAIL
+        value: eod-bod-backend@standard-gcp-project-485906.iam.gserviceaccount.com
+      - key: GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+        sync: false
