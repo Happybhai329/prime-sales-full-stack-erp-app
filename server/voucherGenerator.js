@@ -6,7 +6,8 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const LOGO_PATH = path.join(__dirname, 'assets', 'tpc-logo.jpg');
+const LOGO_PATH = path.join(__dirname, 'assets', 'tpc-logo.png');
+const FALLBACK_LOGO_PATH = path.join(__dirname, 'assets', 'tpc-logo.jpg');
 
 export function normalizeKey(value) {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -441,172 +442,202 @@ export async function generateVoucherPdfBuffer(voucherData) {
     doc.on('end', () => resolve(Buffer.concat(buffers)));
     doc.on('error', reject);
 
-    const primaryColor = '#b3132a';
-    const darkColor = '#222222';
-    const blueHeader = '#dbe9f7';
-    const yellowHeader = '#ffe699';
-    const borderColor = '#9bc2e6';
+    const purpleColor = '#5b21b6';
+    const greenColor = '#16a34a';
+    const darkColor = '#0f172a';
+    const grayText = '#475569';
+    const blueHeader = '#ede9fe';
+    const yellowHeader = '#fef3c7';
+    const borderColor = '#cbd5e1';
 
     const pageWidth = 595.28;
     const margin = 36;
     const contentWidth = pageWidth - margin * 2; // ~523pt
 
-    // --- 1. HEADER & BRANDING ---
+    // --- 1. PRESTIGIOUS INSTITUTIONAL HEADER ---
+    let logoPath = fs.existsSync(LOGO_PATH) ? LOGO_PATH : fs.existsSync(FALLBACK_LOGO_PATH) ? FALLBACK_LOGO_PATH : null;
     let logoDrawn = false;
-    if (fs.existsSync(LOGO_PATH)) {
+
+    if (logoPath) {
       try {
-        doc.image(LOGO_PATH, margin, margin, { width: 55, height: 55 });
+        doc.image(logoPath, margin, margin, { width: 68, height: 68 });
         logoDrawn = true;
       } catch (e) {
         console.warn('Failed to embed logo in PDFKit:', e.message);
       }
     }
 
-    const titleLeft = logoDrawn ? margin + 68 : margin;
-    doc
-      .fontSize(24)
-      .fillColor(primaryColor)
-      .font('Helvetica-Bold')
-      .text('THE PRIME CLASSES', titleLeft, margin + 5);
+    const titleLeft = logoDrawn ? margin + 80 : margin;
 
     doc
-      .fontSize(9)
-      .fillColor('#555555')
+      .fontSize(22)
+      .fillColor(purpleColor)
+      .font('Helvetica-Bold')
+      .text('THE PRIME CLASSES', titleLeft, margin + 2);
+
+    doc
+      .fontSize(9.5)
+      .fillColor(greenColor)
+      .font('Helvetica-Bold')
+      .text('RIMC  |  RMS  |  SAINIK SCHOOL  |  FOUNDATION ACADEMY', titleLeft, margin + 28);
+
+    doc
+      .fontSize(10.5)
+      .fillColor(darkColor)
+      .font('Helvetica-Bold')
+      .text('OFFICIAL ADMISSION & FEE RECEIPT VOUCHER', titleLeft, margin + 44);
+
+    doc
+      .fontSize(8)
+      .fillColor(grayText)
       .font('Helvetica')
-      .text("LET'S THINK, LET'S LEARN", titleLeft, margin + 32);
+      .text("Premier Defense & Academic Preparation Institute  *  Let's Think, Let's Learn", titleLeft, margin + 58);
 
-    doc
-      .fontSize(10)
-      .fillColor('#777777')
-      .font('Helvetica-Bold')
-      .text('FEE VOUCHER / ADMISSION RECEIPT', titleLeft, margin + 45);
+    // Decorative double stripe separator
+    doc.moveTo(margin, margin + 74).lineTo(pageWidth - margin, margin + 74).strokeColor(purpleColor).lineWidth(2).stroke();
+    doc.moveTo(margin, margin + 77).lineTo(pageWidth - margin, margin + 77).strokeColor(greenColor).lineWidth(1).stroke();
 
-    doc.moveTo(margin, margin + 65).lineTo(pageWidth - margin, margin + 65).strokeColor(primaryColor).lineWidth(2).stroke();
+    let curY = margin + 88;
 
-    let curY = margin + 78;
-
-    // Helper table drawing function
-    function drawSectionHeader(title, bgColor) {
-      doc.rect(margin, curY, contentWidth, 22).fillColor(bgColor).fill();
+    // Helper table drawing functions
+    function drawSectionHeader(title, bgColor, textColor = '#1e1b4b') {
+      doc.rect(margin, curY, contentWidth, 20).fillColor(bgColor).fill();
+      doc.rect(margin, curY, contentWidth, 20).strokeColor(borderColor).lineWidth(0.5).stroke();
       doc
-        .fontSize(11)
-        .fillColor('#1e293b')
+        .fontSize(10)
+        .fillColor(textColor)
         .font('Helvetica-Bold')
-        .text(title, margin + 8, curY + 6);
-      curY += 22;
+        .text(title, margin + 8, curY + 5);
+      curY += 20;
     }
 
     function drawTableRow(label, value, isBold = false, customBg = null, isFinal = false) {
-      const rowHeight = 20;
+      const rowHeight = 19;
       if (customBg) {
         doc.rect(margin, curY, contentWidth, rowHeight).fillColor(customBg).fill();
       }
 
-      // Border
+      // Cell borders
       doc.rect(margin, curY, contentWidth, rowHeight).strokeColor(borderColor).lineWidth(0.5).stroke();
-      doc.moveTo(margin + contentWidth * 0.45, curY).lineTo(margin + contentWidth * 0.45, curY + rowHeight).stroke();
+      doc.moveTo(margin + contentWidth * 0.42, curY).lineTo(margin + contentWidth * 0.42, curY + rowHeight).stroke();
 
       doc
-        .fontSize(9.5)
-        .fillColor(isFinal ? primaryColor : darkColor)
-        .font(isBold ? 'Helvetica-Bold' : 'Helvetica')
-        .text(label, margin + 8, curY + 5);
+        .fontSize(9)
+        .fillColor(isFinal ? '#854d0e' : grayText)
+        .font(isBold || isFinal ? 'Helvetica-Bold' : 'Helvetica')
+        .text(label, margin + 8, curY + 4.5);
 
       doc
-        .fontSize(9.5)
-        .fillColor(isFinal ? primaryColor : darkColor)
-        .font(isBold ? 'Helvetica-Bold' : 'Helvetica')
-        .text(String(value || '-'), margin + contentWidth * 0.45 + 8, curY + 5, {
-          width: contentWidth * 0.53 - 16,
+        .fontSize(9)
+        .fillColor(isFinal ? '#854d0e' : darkColor)
+        .font(isBold || isFinal ? 'Helvetica-Bold' : 'Helvetica')
+        .text(String(value || '-'), margin + contentWidth * 0.42 + 8, curY + 4.5, {
+          width: contentWidth * 0.56 - 16,
           align: 'left'
         });
 
       curY += rowHeight;
     }
 
-    // --- 2. BASIC INFORMATION ---
-    drawSectionHeader('BASIC INFORMATION', blueHeader);
+    // --- 2. CANDIDATE & ENROLLMENT PARTICULARS ---
+    drawSectionHeader('1. CANDIDATE & ADMISSION INFORMATION', blueHeader, purpleColor);
     drawTableRow('STUDENT NAME', (voucherData.studentName || '-').toUpperCase(), true);
     drawTableRow("FATHER'S NAME", (voucherData.fatherName || '-').toUpperCase(), true);
-    drawTableRow('PROGRAM / COURSE', (voucherData.program || '-').toUpperCase(), false);
-    drawTableRow('ADMISSION DATE', voucherData.admissionDate || '-', false);
+    drawTableRow('ACADEMIC PROGRAM / WING', (voucherData.program || '-').toUpperCase(), false);
+    drawTableRow('DATE OF ADMISSION', voucherData.admissionDate || '-', false);
     if (voucherData.session) {
-      drawTableRow('SESSION', voucherData.session, false);
+      drawTableRow('ENROLLMENT SESSION', voucherData.session, false);
     }
     if (voucherData.mobileNumber) {
-      drawTableRow('CONTACT NUMBER', voucherData.mobileNumber, false);
+      drawTableRow('REGISTERED CONTACT NUMBER', voucherData.mobileNumber, false);
     }
 
-    curY += 12;
+    curY += 10;
 
-    // --- 3. FEE STRUCTURE ---
-    drawSectionHeader('FEE STRUCTURE', blueHeader);
+    // --- 3. ITEMISED FEE STRUCTURE & DEDUCTIONS ---
+    drawSectionHeader('2. INSTITUTIONAL FEE STRUCTURE & BREAKUP', blueHeader, purpleColor);
     drawTableRow('REGISTRATION FEE', voucherData.display.registrationFee);
     drawTableRow('TUITION FEE', voucherData.display.tuitionFee);
+
     if (voucherData.otherFees > 0) {
-      drawTableRow('OTHER FEES', voucherData.display.otherFees);
+      drawTableRow('OTHER ADDITIONAL FEES', voucherData.display.otherFees);
       if (voucherData.otherFeesBreakdown && voucherData.otherFeesBreakdown.length > 0) {
-        const breakdownStr = voucherData.otherFeesBreakdown.map((b) => `${b.label}: ${b.amountDisplay}`).join(' | ');
+        const breakdownStr = voucherData.otherFeesBreakdown.map((b) => `${b.label}: ${b.amountDisplay}`).join('  |  ');
         drawTableRow('OTHER FEES BREAKDOWN', breakdownStr);
       }
     }
-    drawTableRow('TOTAL AMOUNT', voucherData.display.totalAmount, true);
-    drawTableRow(`DISCOUNT (${voucherData.display.discountPercent})`, voucherData.display.discountAmount);
-    if (voucherData.scholarshipAmount > 0) {
-      drawTableRow('SCHOLARSHIP AMOUNT', voucherData.display.scholarshipAmount);
+
+    drawTableRow('GROSS TOTAL AMOUNT', voucherData.display.totalAmount, true);
+
+    if (voucherData.discountAmount > 0) {
+      drawTableRow(`MERIT DISCOUNT (${voucherData.display.discountPercent})`, `- ${voucherData.display.discountAmount}`);
     }
-    drawTableRow(`GST (${voucherData.display.gstPercent})`, voucherData.display.gstAmount);
-    drawTableRow('FINAL PAYABLE AMOUNT', voucherData.display.finalPayable, true, '#fff4d8', true);
+    if (voucherData.scholarshipAmount > 0) {
+      drawTableRow('SCHOLARSHIP CONCESSION', `- ${voucherData.display.scholarshipAmount}`);
+    }
+    if (voucherData.gstAmount > 0) {
+      drawTableRow(`APPLICABLE GST (${voucherData.display.gstPercent})`, `+ ${voucherData.display.gstAmount}`);
+    }
 
-    curY += 12;
+    drawTableRow('NET PAYABLE AMOUNT (FINAL)', voucherData.display.finalPayable, true, '#fef9c3', true);
 
-    // --- 4. INSTALLMENT SCHEDULE ---
-    drawSectionHeader('INSTALLMENT SCHEDULE', yellowHeader);
-    // Table Header for Installments
+    curY += 10;
+
+    // --- 4. SCHEDULED PAYMENT INSTALLMENTS ---
+    drawSectionHeader('3. SCHEDULED INSTALLMENT TIMELINE', yellowHeader, '#854d0e');
     const instColWidth = contentWidth / 2;
-    doc.rect(margin, curY, contentWidth, 18).fillColor('#f1f5f9').fill();
+    doc.rect(margin, curY, contentWidth, 18).fillColor('#f8fafc').fill();
     doc.rect(margin, curY, contentWidth, 18).strokeColor(borderColor).lineWidth(0.5).stroke();
     doc.moveTo(margin + instColWidth, curY).lineTo(margin + instColWidth, curY + 18).stroke();
-    doc.fontSize(9).fillColor('#334155').font('Helvetica-Bold').text('DUE DATE', margin + 8, curY + 5);
-    doc.fontSize(9).fillColor('#334155').font('Helvetica-Bold').text('AMOUNT PAYABLE', margin + instColWidth + 8, curY + 5);
+    doc.fontSize(8.5).fillColor('#475569').font('Helvetica-Bold').text('INSTALLMENT DUE DATE', margin + 8, curY + 5);
+    doc.fontSize(8.5).fillColor('#475569').font('Helvetica-Bold').text('AMOUNT PAYABLE', margin + instColWidth + 8, curY + 5);
     curY += 18;
 
     const installments = (voucherData.installments || []).slice();
-    while (installments.length < 5) {
+    while (installments.length < 4) {
       installments.push({ date: '', amountDisplay: '' });
     }
 
     installments.forEach((inst, idx) => {
-      const bg = idx % 2 === 1 ? '#fafafa' : '#ffffff';
-      doc.rect(margin, curY, contentWidth, 18).fillColor(bg).fill();
-      doc.rect(margin, curY, contentWidth, 18).strokeColor(borderColor).lineWidth(0.5).stroke();
-      doc.moveTo(margin + instColWidth, curY).lineTo(margin + instColWidth, curY + 18).stroke();
+      const bg = idx % 2 === 1 ? '#fafbfc' : '#ffffff';
+      doc.rect(margin, curY, contentWidth, 17).fillColor(bg).fill();
+      doc.rect(margin, curY, contentWidth, 17).strokeColor(borderColor).lineWidth(0.5).stroke();
+      doc.moveTo(margin + instColWidth, curY).lineTo(margin + instColWidth, curY + 17).stroke();
 
       if (inst.date) {
-        doc.fontSize(9).fillColor(darkColor).font('Helvetica').text(inst.date, margin + 8, curY + 4);
+        doc.fontSize(8.5).fillColor(darkColor).font('Helvetica').text(inst.date, margin + 8, curY + 4);
       }
       if (inst.amountDisplay) {
-        doc.fontSize(9).fillColor(darkColor).font('Helvetica-Bold').text(inst.amountDisplay, margin + instColWidth + 8, curY + 4);
+        doc.fontSize(8.5).fillColor(darkColor).font('Helvetica-Bold').text(inst.amountDisplay, margin + instColWidth + 8, curY + 4);
       }
-      curY += 18;
+      curY += 17;
     });
 
-    curY += 30;
+    curY += 24;
 
-    // --- 5. SIGNATURE & STAMP BLOCK ---
+    // --- 5. AUTHORIZED STAMP & SIGNATURE BLOCK ---
     if (curY < 720) {
       doc
-        .fontSize(9)
-        .fillColor('#666666')
+        .fontSize(8)
+        .fillColor('#64748b')
         .font('Helvetica-Oblique')
-        .text('* This is a computer-generated voucher issued by The Prime Classes Management Portal.', margin, curY);
+        .text('* This voucher is an official computer-verified institutional record of The Prime Classes ERP System.', margin, curY);
 
       doc
-        .fontSize(9)
-        .fillColor('#222222')
+        .fontSize(8.5)
+        .fillColor('#0f172a')
         .font('Helvetica-Bold')
-        .text('Authorized Signature / Stamp', pageWidth - margin - 180, curY + 25, {
-          width: 180,
+        .text('Accounts Officer / Authorized Signatory', pageWidth - margin - 220, curY + 30, {
+          width: 220,
+          align: 'right'
+        });
+
+      doc
+        .fontSize(7.5)
+        .fillColor('#94a3b8')
+        .font('Helvetica')
+        .text('The Prime Classes Defense Academy', pageWidth - margin - 220, curY + 42, {
+          width: 220,
           align: 'right'
         });
     }

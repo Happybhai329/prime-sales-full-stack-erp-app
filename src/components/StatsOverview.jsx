@@ -11,7 +11,7 @@ export default function StatsOverview({ stats, activeTab, onSelectTab }) {
       >
         <div className="stat-label">Inquiries</div>
         <div className="stat-value">
-          <Users size={24} color="#b3132a" style={{ opacity: 0.8 }} />
+          <Users size={24} color="#6366f1" style={{ opacity: 0.9 }} />
           <span>{stats?.inquiries || 0}</span>
         </div>
         <div className="stat-subline">Prospective student leads</div>
@@ -24,7 +24,7 @@ export default function StatsOverview({ stats, activeTab, onSelectTab }) {
       >
         <div className="stat-label">Active Admissions</div>
         <div className="stat-value">
-          <GraduationCap size={24} color="#059669" style={{ opacity: 0.8 }} />
+          <GraduationCap size={24} color="#16a34a" style={{ opacity: 0.9 }} />
           <span>{stats?.active || 0}</span>
         </div>
         <div className="stat-subline">Enrolled student records</div>
@@ -37,7 +37,7 @@ export default function StatsOverview({ stats, activeTab, onSelectTab }) {
       >
         <div className="stat-label">Cancelled Log</div>
         <div className="stat-value">
-          <UserX size={24} color="#dc2626" style={{ opacity: 0.8 }} />
+          <UserX size={24} color="#ef4444" style={{ opacity: 0.9 }} />
           <span>{stats?.cancelled || 0}</span>
         </div>
         <div className="stat-subline">Withdrawn & cancelled admissions</div>
@@ -50,7 +50,7 @@ export default function StatsOverview({ stats, activeTab, onSelectTab }) {
       >
         <div className="stat-label">Conversions</div>
         <div className="stat-value">
-          <TrendingUp size={24} color="#b3132a" style={{ opacity: 0.8 }} />
+          <TrendingUp size={24} color="#d97706" style={{ opacity: 0.9 }} />
           <span>{stats?.conversions || 0}</span>
           <span className="stat-suffix">students</span>
         </div>

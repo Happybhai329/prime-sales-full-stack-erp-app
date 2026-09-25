@@ -684,7 +684,374 @@ app.post('/api/sync/trigger', async (req, res) => {
 });
 
 // ==============================================================================
-// 8. STATIC ASSETS & SPA ROUTING (RENDER READY)
+// 8. PUBLIC PORTALS & SUBMISSION ENDPOINTS (ENQUIRY & ADMISSION)
+// ==============================================================================
+
+function getStudentClassCode(className) {
+  const norm = String(className || '').toUpperCase().trim();
+  if (norm.includes('RIMC')) return 'RM';
+  if (norm.includes('RMS')) return 'RS';
+  if (norm.includes('SAINIK')) return 'SS';
+  if (norm.includes('NDA')) return 'ND';
+  if (norm.includes('6')) return '06';
+  if (norm.includes('7')) return '07';
+  if (norm.includes('8')) return '08';
+  if (norm.includes('9')) return '09';
+  if (norm.includes('10')) return '10';
+  if (norm.includes('11')) return '11';
+  if (norm.includes('12')) return '12';
+  return 'PR';
+}
+
+// Serve Enquiry Form
+app.get('/enquiry-form', (req, res) => {
+  const candidates = [
+    path.join(__dirname, '..', 'dist', 'enquiry-form.html'),
+    path.join(__dirname, '..', 'public', 'enquiry-form.html')
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return res.sendFile(c);
+  }
+  res.status(404).send('Enquiry Form template not found.');
+});
+
+// Serve Admission Form
+app.get('/admission-form', (req, res) => {
+  const candidates = [
+    path.join(__dirname, '..', 'dist', 'admission-form.html'),
+    path.join(__dirname, '..', 'public', 'admission-form.html')
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return res.sendFile(c);
+  }
+  res.status(404).send('Admission Form template not found.');
+});
+
+// Public Academic Programs dropdown
+app.get('/api/public/programs', async (req, res) => {
+  try {
+    const dbRes = await query('SELECT program_name FROM prime_academic_programs ORDER BY program_name ASC');
+    let programs = dbRes.rows.map((r) => r.program_name);
+    if (!programs.length) {
+      programs = [
+        'RIMC Foundation',
+        'RMS Cadets',
+        'Sainik School Entrance',
+        'NDA Foundation',
+        'Class 6th Foundation',
+        'Class 9th Foundation'
+      ];
+    }
+    res.json({ success: true, data: programs });
+  } catch (err) {
+    res.json({
+      success: true,
+      data: ['RIMC Foundation', 'RMS Cadets', 'Sainik School Entrance', 'NDA Foundation']
+    });
+  }
+});
+
+// Public Fee Types dropdown
+app.get('/api/public/fee-types', async (req, res) => {
+  try {
+    const dbRes = await query('SELECT fee_type, amount FROM prime_fee_types ORDER BY fee_type ASC');
+    let feeTypes = dbRes.rows.map((r) => ({
+      feeType: r.fee_type,
+      amount: parseFloat(r.amount || 0)
+    }));
+    res.json({ success: true, data: feeTypes });
+  } catch (err) {
+    res.json({ success: true, data: [] });
+  }
+});
+
+// Public Enquiries list (for Admission Form "Fetch from Enquiry" modal)
+app.get('/api/public/enquiries', async (req, res) => {
+  try {
+    const dbRes = await query('SELECT row_number, student_name, father_name, mobile, program, raw_values FROM prime_inquiries ORDER BY row_number DESC LIMIT 600');
+    const headers = await getCachedHeaders('inquiries');
+    
+    const records = dbRes.rows.map((row) => {
+      const vals = row.raw_values || [];
+      const getValue = (h) => {
+        const idx = headers.indexOf(h);
+        return idx !== -1 && vals[idx] != null ? String(vals[idx]).trim() : '';
+      };
+      return {
+        studentName: row.student_name || getValue('Student Name'),
+        className: getValue('Class'),
+        dob: getValue('Date of Birth'),
+        category: getValue('Category'),
+        fatherName: row.father_name || getValue('Father Name'),
+        fatherNo: row.mobile || getValue('Father No.'),
+        parentEmail: getValue('Parent Email'),
+        motherName: getValue('Mother Name'),
+        motherNo: getValue('Mother No.'),
+        occupation: getValue('Father Occupation'),
+        completeAddress: getValue('Complete Address'),
+        school: getValue('Present School'),
+        discountScholarship: getValue('Discount (Scholarship)')
+      };
+    });
+    res.json({ success: true, data: records });
+  } catch (err) {
+    console.error('Error in /api/public/enquiries:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Submit Enquiry Form
+app.post('/api/enquiry-form/submit', async (req, res) => {
+  try {
+    const data = req.body || {};
+    const name = String(data.name || '').trim();
+    const studentClass = String(data.studentClass || '').trim();
+    const fatherNo = String(data.fatherNo || '').trim();
+
+    if (!name || !studentClass || !fatherNo) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Name, Class, and Father\'s Number are mandatory.'
+      });
+    }
+
+    const countRes = await query('SELECT COALESCE(MAX(row_number), 0) + 1 AS next_row FROM prime_inquiries');
+    const nextRow = parseInt(countRes.rows[0]?.next_row || 1, 10);
+    const nowIso = new Date().toISOString();
+
+    const headers = await getCachedHeaders('inquiries');
+    const inquiryHeaders = headers.length > 0 ? headers : [
+      'Timestamp', 'S.No.', 'Date', 'Student Name', 'Class', 'Date of Birth',
+      'Category', 'Father Name', 'Father No.', 'Parent Email', 'Mother Name', 'Mother No.',
+      'Father Occupation', 'Complete Address', 'Present School', 'Prime Feedback',
+      'Source', 'Discount (Scholarship)', 'Notes'
+    ];
+
+    const valuesByHeader = {
+      'Timestamp': new Date().toLocaleString('en-IN'),
+      'S.No.': String(nextRow),
+      'Date': data.date || nowIso.split('T')[0],
+      'Student Name': name,
+      'Class': studentClass,
+      'Date of Birth': data.dob || '',
+      'Category': data.category || '',
+      'Father Name': data.fatherName || '',
+      'Father No.': fatherNo,
+      'Parent Email': data.email || '',
+      'Mother Name': data.motherName || '',
+      'Mother No.': data.motherNo || '',
+      'Father Occupation': data.fatherOccupation || '',
+      'Complete Address': data.address || '',
+      'Present School': data.school || '',
+      'Prime Feedback': data.feedback || '',
+      'Source': data.source || '',
+      'Discount (Scholarship)': data.discount || '',
+      'Notes': data.notes || ''
+    };
+
+    const rowValues = inquiryHeaders.map((h) => valuesByHeader[h] != null ? valuesByHeader[h] : '');
+
+    // Insert locally into database immediately
+    await query(
+      `INSERT INTO prime_inquiries (row_number, student_name, father_name, mobile, program, inquiry_date, raw_values)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        nextRow,
+        name,
+        data.fatherName || '',
+        fatherNo,
+        studentClass,
+        new Date(),
+        JSON.stringify(rowValues)
+      ]
+    );
+
+    // Append to remote Google Sheets asynchronously
+    sheets.appendEnquiry(rowValues).catch((err) => {
+      console.error('[GoogleSheets] Append enquiry error:', err.message);
+    });
+
+    res.json({
+      status: 'success',
+      sno: nextRow,
+      message: `Enquiry Registered Successfully! Allocated S.No: ${nextRow}`
+    });
+  } catch (err) {
+    console.error('Error submitting enquiry form:', err);
+    res.status(500).json({ status: 'error', message: 'Database save failed: ' + err.message });
+  }
+});
+
+// Submit Admission Form
+app.post('/api/admission-form/submit', async (req, res) => {
+  try {
+    const { formData, filesData } = req.body || {};
+    if (!formData) {
+      return res.status(400).json({ status: 'error', message: 'Missing form data.' });
+    }
+
+    const studentName = String(formData.studentName || '').trim();
+    const fatherName = String(formData.fatherName || '').trim();
+    const studentClass = String(formData.class || '').trim();
+
+    if (!studentName || !fatherName || !studentClass) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Student Name, Father Name, and Class are mandatory.'
+      });
+    }
+
+    // Generate Unique Student ID
+    const appDate = formData.applicationDate ? new Date(formData.applicationDate) : new Date();
+    const yearYY = String(appDate.getFullYear()).slice(-2);
+    const monthMM = String(appDate.getMonth() + 1).padStart(2, '0');
+    const classCode = getStudentClassCode(studentClass);
+    const prefix = `${yearYY}${monthMM}${classCode}`;
+
+    // Find highest sequence for prefix
+    const countRes = await query('SELECT COALESCE(MAX(row_number), 0) + 1 AS next_row FROM prime_admissions');
+    const nextRow = parseInt(countRes.rows[0]?.next_row || 1, 10);
+    const candidateId = `${prefix}${String(nextRow).padStart(4, '0')}`;
+
+    const headers = await getCachedHeaders('admissions');
+    const admissionHeaders = headers.length > 0 ? headers : [
+      'Student Name', "Father's Name", "Mother's Name", 'Timestamp', 'StudentsId',
+      'Start Session', 'End Session', 'Date of Application', 'DOB', 'Mobile Numbers',
+      'Email', 'Category', "Father's Occupation", 'Defence Service', 'Job Description',
+      'Class', 'Present School', 'Aadhaar Card', 'DOB Certificate', 'Domicile',
+      'Student Photo', 'Caste Certificate', 'Service Certificate', 'Program',
+      'Registration Fee', 'Tuition Fee', 'Other Fees (JSON)', 'Installment Details (JSON)',
+      'Total Amount', 'Discount (%)', 'Scholarship Amount', 'GST (%)', 'Final Cost',
+      'Terms Agreement', 'Advance Check', 'VoucherPDFLink', 'VoucherStatus', 'Caste',
+      'Parent Email', 'Complete Address'
+    ];
+
+    const parentEmail = formData.parentEmail || formData.email || '';
+    const mobileNumbersStr = typeof formData.mobileNumbers === 'string'
+      ? formData.mobileNumbers
+      : JSON.stringify(formData.mobileNumbers || []);
+
+    const valuesByHeader = {
+      'Timestamp': new Date().toLocaleString('en-IN'),
+      'StudentsId': candidateId,
+      'Start Session': formData.startSession || '',
+      'End Session': formData.endSession || '',
+      'Date of Application': formData.applicationDate || new Date().toISOString().split('T')[0],
+      'Student Name': studentName,
+      "Father's Name": fatherName,
+      'DOB': formData.dob || '',
+      'Mobile Numbers': mobileNumbersStr,
+      'Email': parentEmail,
+      'Parent Email': parentEmail,
+      "Mother's Name": formData.motherName || '',
+      'Category': formData.caste || '',
+      'Caste': formData.caste || '',
+      "Father's Occupation": formData.fatherOccupation || '',
+      'Defence Service': formData.defenceService || '',
+      'Job Description': formData.jobDescription || '',
+      'Class': studentClass,
+      'Present School': formData.presentSchool || '',
+      'Complete Address': formData.completeAddress || '',
+      'Program': formData.program || '',
+      'Registration Fee': formData.registrationFee || 0,
+      'Tuition Fee': formData.tuitionFee || 0,
+      'Other Fees (JSON)': typeof formData.feeDetails === 'string' ? formData.feeDetails : JSON.stringify(formData.feeDetails || []),
+      'Installment Details (JSON)': typeof formData.installmentDetails === 'string' ? formData.installmentDetails : JSON.stringify(formData.installmentDetails || []),
+      'Total Amount': formData.totalAmount || 0,
+      'Discount (%)': formData.discountPercent || 0,
+      'Scholarship Amount': formData.scholarshipAmount || 0,
+      'GST (%)': formData.gstPercent || 0,
+      'Final Cost': formData.finalCost || 0,
+      'Terms Agreement': formData.termsAgreement || 'Agreed',
+      'Advance Check': formData.advanceCheck || '',
+      'VoucherStatus': 'Not Given',
+      'VoucherPDFLink': ''
+    };
+
+    const rowValues = admissionHeaders.map((h) => valuesByHeader[h] != null ? valuesByHeader[h] : '');
+
+    // Insert locally into database immediately
+    await query(
+      `INSERT INTO prime_admissions (
+        row_number, student_name, father_name, program, admission_date,
+        start_session, end_session, mobile, registration_fee, tuition_fee,
+        other_fees_json, total_amount, discount_percent, scholarship_amount,
+        gst_percent, final_cost, installment_details_json, voucher_status,
+        voucher_pdf_link, raw_values
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`,
+      [
+        nextRow,
+        studentName,
+        fatherName,
+        formData.program || '',
+        new Date(),
+        formData.startSession || '',
+        formData.endSession || '',
+        mobileNumbersStr,
+        parseFloat(formData.registrationFee || 0),
+        parseFloat(formData.tuitionFee || 0),
+        valuesByHeader['Other Fees (JSON)'],
+        parseFloat(formData.totalAmount || 0),
+        parseFloat(formData.discountPercent || 0),
+        parseFloat(formData.scholarshipAmount || 0),
+        parseFloat(formData.gstPercent || 0),
+        parseFloat(formData.finalCost || 0),
+        valuesByHeader['Installment Details (JSON)'],
+        'Not Given',
+        '',
+        JSON.stringify(rowValues)
+      ]
+    );
+
+    // Append to remote Google Sheets asynchronously
+    sheets.appendAdmission(rowValues).catch((err) => {
+      console.error('[GoogleSheets] Append admission error:', err.message);
+    });
+
+    res.json({
+      status: 'success',
+      success: true,
+      studentId: candidateId,
+      pdfUrl: `/api/admission-form/pdf/${candidateId}`,
+      message: `Admission Submitted Successfully! Student ID: ${candidateId}`
+    });
+  } catch (err) {
+    console.error('Error submitting admission form:', err);
+    res.status(500).json({ status: 'error', message: 'Admission save failed: ' + err.message });
+  }
+});
+
+// Admission PDF / Acknowledgment generator
+app.get('/api/admission-form/pdf/:studentId', async (req, res) => {
+  try {
+    const studentId = req.params.studentId;
+    const admRes = await query(
+      'SELECT * FROM prime_admissions WHERE raw_values::text LIKE $1 OR student_name ILIKE $2 LIMIT 1',
+      [`%${studentId}%`, `%${studentId}%`]
+    );
+
+    if (admRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Student admission record not found.' });
+    }
+
+    const headers = await getCachedHeaders('admissions');
+    const voucherData = buildVoucherData(headers, admRes.rows[0].raw_values, admRes.rows[0].row_number);
+    const pdfBuffer = await generateRecordPdfBuffer(voucherData);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="The_Prime_Classes_Admission_${studentId}.pdf"`
+    );
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error('Error generating admission PDF:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ==============================================================================
+// 9. STATIC ASSETS & SPA ROUTING (RENDER READY)
 // ==============================================================================
 const distPath = path.join(__dirname, '..', 'dist');
 if (fs.existsSync(distPath)) {

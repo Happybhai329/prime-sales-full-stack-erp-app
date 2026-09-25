@@ -422,3 +422,38 @@ export async function uploadVoucherPdf(fileName, pdfBuffer) {
   const pdfUrl = file.data.webViewLink || `https://drive.google.com/file/d/${file.data.id}/view`;
   return { id: file.data.id, pdfUrl };
 }
+
+/**
+ * Appends a new enquiry row to Google Sheets 'Enquiries'
+ */
+export async function appendEnquiry(rowValues) {
+  const { sheets } = getGoogleClients();
+  const res = await sheets.spreadsheets.values.append({
+    spreadsheetId: INQUIRY_SS_ID,
+    range: `${INQUIRY_SHEET_NAME}!A1`,
+    valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
+    requestBody: {
+      values: [rowValues]
+    }
+  });
+  return res.data;
+}
+
+/**
+ * Appends a new admission row to Google Sheets 'Admissions'
+ */
+export async function appendAdmission(rowValues) {
+  const { sheets } = getGoogleClients();
+  const res = await sheets.spreadsheets.values.append({
+    spreadsheetId: ADMISSION_SS_ID,
+    range: `${ADMISSIONS_SHEET_NAME}!A1`,
+    valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
+    requestBody: {
+      values: [rowValues]
+    }
+  });
+  return res.data;
+}
+

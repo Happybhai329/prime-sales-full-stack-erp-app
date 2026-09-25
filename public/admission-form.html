@@ -1,0 +1,3543 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Prime Classes - Admission Intake Portal</title>
+    <link rel="icon" type="image/png" href="/tpc-logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --bg-top: #f7f1e8;
+        --bg-bottom: #eef4f8;
+        --surface: rgba(255, 255, 255, 0.88);
+        --surface-strong: #14213d;
+        --surface-muted: #f3f6fb;
+        --border: rgba(20, 33, 61, 0.12);
+        --border-strong: rgba(20, 33, 61, 0.2);
+        --text: #172033;
+        --muted: #5d677a;
+        --primary: #0f4c81;
+        --primary-dark: #0b3558;
+        --accent: #c7792b;
+        --accent-soft: #f7e6d3;
+        --success: #1f7a53;
+        --success-soft: #edf8f1;
+        --danger: #b93e3e;
+        --danger-soft: #fff0ee;
+        --shadow-lg: 0 28px 60px rgba(17, 24, 39, 0.12);
+        --shadow-md: 0 18px 34px rgba(17, 24, 39, 0.08);
+        --radius-xl: 32px;
+        --radius-lg: 24px;
+        --radius-md: 18px;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        min-height: 100vh;
+        font-family: "Manrope", "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(199, 121, 43, 0.18), transparent 30%),
+          radial-gradient(circle at top right, rgba(15, 76, 129, 0.16), transparent 34%),
+          linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 55%, #f7f9fc 100%);
+        color: var(--text);
+        line-height: 1.6;
+      }
+
+      .page-shell {
+        width: min(1180px, calc(100% - 24px));
+        margin: 0 auto;
+        padding: 28px 0 56px;
+      }
+
+      .hero-panel {
+        position: relative;
+        overflow: hidden;
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.85fr);
+        gap: 24px;
+        padding: 32px;
+        margin-bottom: 24px;
+        border-radius: var(--radius-xl);
+        background: linear-gradient(135deg, rgba(20, 33, 61, 0.98), rgba(15, 76, 129, 0.94));
+        color: #ffffff;
+        box-shadow: var(--shadow-lg);
+      }
+
+      .hero-panel::before,
+      .hero-panel::after {
+        content: "";
+        position: absolute;
+        border-radius: 999px;
+        pointer-events: none;
+      }
+
+      .hero-panel::before {
+        width: 260px;
+        height: 260px;
+        top: -110px;
+        right: -80px;
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .hero-panel::after {
+        width: 200px;
+        height: 200px;
+        bottom: -90px;
+        left: 40%;
+        background: rgba(199, 121, 43, 0.16);
+      }
+
+      .hero-copy,
+      .hero-side {
+        position: relative;
+        z-index: 1;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 14px;
+        margin-bottom: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        font-size: 0.82rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .hero-copy h1 {
+        font-family: "Fraunces", Georgia, serif;
+        font-size: clamp(2.35rem, 5vw, 4.1rem);
+        line-height: 1.04;
+        letter-spacing: -0.03em;
+        margin-bottom: 16px;
+      }
+
+      .hero-copy p {
+        max-width: 62ch;
+        color: rgba(255, 255, 255, 0.82);
+        font-size: 1.04rem;
+      }
+
+      .hero-chip-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      .hero-chip {
+        padding: 10px 14px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        font-size: 0.92rem;
+        font-weight: 600;
+      }
+
+      .hero-side {
+        display: grid;
+        gap: 14px;
+        align-content: center;
+      }
+
+      .hero-stat {
+        padding: 18px 20px;
+        border-radius: var(--radius-lg);
+        background: rgba(255, 255, 255, 0.09);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(12px);
+      }
+
+      .hero-stat span {
+        display: block;
+        margin-bottom: 8px;
+        color: rgba(255, 255, 255, 0.68);
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .hero-stat strong {
+        display: block;
+        font-size: 1.05rem;
+        line-height: 1.45;
+      }
+
+      #formContainer {
+        padding: 30px;
+        background: var(--surface);
+        border: 1px solid rgba(255, 255, 255, 0.72);
+        border-radius: var(--radius-xl);
+        backdrop-filter: blur(18px);
+        box-shadow: var(--shadow-lg);
+      }
+
+      .form-intro {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 24px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .form-kicker {
+        margin-bottom: 10px;
+        color: var(--primary);
+        font-size: 0.85rem;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .form-title {
+        font-family: "Fraunces", Georgia, serif;
+        font-size: clamp(1.8rem, 3vw, 2.6rem);
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        margin-bottom: 10px;
+      }
+
+      .form-subtitle {
+        max-width: 64ch;
+        color: var(--muted);
+      }
+
+      .form-note {
+        min-width: min(320px, 100%);
+        padding: 18px 20px;
+        border-radius: var(--radius-lg);
+        border: 1px solid rgba(15, 76, 129, 0.12);
+        background: linear-gradient(135deg, rgba(15, 76, 129, 0.08), rgba(199, 121, 43, 0.08));
+        box-shadow: var(--shadow-md);
+      }
+
+      .form-note-label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--primary);
+        font-size: 0.82rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .form-note strong {
+        display: block;
+        color: var(--text);
+        line-height: 1.5;
+      }
+
+      #admissionForm {
+        display: grid;
+        gap: 22px;
+      }
+
+      .form-section {
+        padding: 24px;
+        border: 1px solid var(--border);
+        border-radius: 28px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(244, 247, 251, 0.92));
+        box-shadow: var(--shadow-md);
+      }
+
+      .section-title {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 8px;
+        color: var(--primary-dark);
+        font-size: 1.5rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+
+      .section-number {
+        display: inline-grid;
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 0.95rem;
+        font-weight: 800;
+        box-shadow: inset 0 0 0 1px rgba(199, 121, 43, 0.16);
+      }
+
+      .section-summary {
+        margin-bottom: 18px;
+        color: var(--muted);
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 18px;
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .form-group.full-width {
+        grid-column: 1 / -1;
+      }
+
+      .top-gap-sm {
+        margin-top: 10px;
+      }
+
+      .top-gap-lg {
+        margin-top: 20px;
+      }
+
+      label {
+        color: #1d2940;
+        font-size: 0.95rem;
+        font-weight: 700;
+      }
+
+      input[type="text"],
+      input[type="date"],
+      input[type="tel"],
+      input[type="email"],
+      input[type="number"],
+      input[type="file"],
+      select,
+      textarea {
+        width: 100%;
+        padding: 14px 16px;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: rgba(252, 253, 255, 0.96);
+        color: var(--text);
+        font: inherit;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+      }
+
+      input:hover,
+      select:hover,
+      textarea:hover {
+        border-color: rgba(15, 76, 129, 0.28);
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: none;
+        border-color: rgba(15, 76, 129, 0.56);
+        box-shadow: 0 0 0 4px rgba(15, 76, 129, 0.12);
+      }
+
+      input[readonly] {
+        background: linear-gradient(180deg, #eef3f8, #e5ebf4);
+        color: #40516f;
+        font-weight: 700;
+        cursor: not-allowed;
+      }
+
+      .floating-control {
+        position: relative;
+      }
+
+      .floating-control input {
+        min-height: 62px;
+        padding: 22px 16px 10px 50px;
+      }
+
+      .floating-control .field-icon {
+        position: absolute;
+        left: 18px;
+        top: 50%;
+        z-index: 1;
+        color: var(--primary);
+        font-size: 1.1rem;
+        line-height: 1;
+        transform: translateY(-50%);
+        pointer-events: none;
+      }
+
+      .floating-control label {
+        position: absolute;
+        left: 50px;
+        top: 50%;
+        z-index: 1;
+        margin: 0;
+        color: var(--muted);
+        transform: translateY(-50%);
+        transition: top 0.18s ease, transform 0.18s ease, color 0.18s ease, font-size 0.18s ease;
+        pointer-events: none;
+      }
+
+      .floating-control input:focus ~ label,
+      .floating-control input:not(:placeholder-shown) ~ label {
+        top: 9px;
+        color: var(--primary-dark);
+        font-size: 0.74rem;
+        transform: translateY(0);
+      }
+
+      .floating-control input:invalid:not(:placeholder-shown) {
+        border-color: rgba(185, 62, 62, 0.44);
+      }
+
+      .autofill-highlight {
+        animation: autofillPulse 0.9s ease;
+      }
+
+      textarea {
+        min-height: 96px;
+        resize: vertical;
+      }
+
+      select {
+        appearance: none;
+        background-image:
+          linear-gradient(45deg, transparent 50%, var(--primary) 50%),
+          linear-gradient(135deg, var(--primary) 50%, transparent 50%);
+        background-position:
+          calc(100% - 22px) calc(50% - 4px),
+          calc(100% - 16px) calc(50% - 4px);
+        background-size: 6px 6px, 6px 6px;
+        background-repeat: no-repeat;
+        padding-right: 44px;
+      }
+
+      input[type="file"] {
+        padding: 16px;
+        border-style: dashed;
+        border-width: 1.5px;
+        background: rgba(250, 252, 255, 0.98);
+      }
+
+      input[type="file"]::file-selector-button {
+        margin-right: 12px;
+        padding: 10px 14px;
+        border: none;
+        border-radius: 12px;
+        background: #e8f1fb;
+        color: var(--primary);
+        font-family: inherit;
+        font-size: 0.92rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background-color 0.2s ease, transform 0.2s ease;
+      }
+
+      input[type="file"]::file-selector-button:hover {
+        background: #dbe9f8;
+        transform: translateY(-1px);
+      }
+
+      #mobileContainer,
+      #feeContainer,
+      #installmentContainer {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .mobile-input-group {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+      }
+
+      .fee-entry,
+      .installment-entry {
+        display: grid;
+        grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        padding: 14px;
+        border: 1px solid rgba(15, 76, 129, 0.12);
+        border-radius: 20px;
+        background: var(--surface-muted);
+      }
+
+      button {
+        font-family: inherit;
+      }
+
+      .add-btn,
+      #calculateBtn,
+      #submitBtn,
+      #downloadPdfBtn,
+      .remove-btn {
+        transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, opacity 0.18s ease;
+      }
+
+      .add-btn {
+        align-self: flex-start;
+        padding: 12px 18px;
+        margin-top: 10px;
+        border: none;
+        border-radius: 16px;
+        background: #e9f2fb;
+        color: var(--primary);
+        font-size: 0.95rem;
+        font-weight: 800;
+        cursor: pointer;
+        box-shadow: 0 12px 24px rgba(15, 76, 129, 0.08);
+      }
+
+      .add-btn:hover,
+      #calculateBtn:hover,
+      #submitBtn:hover,
+      #downloadPdfBtn:hover,
+      .remove-btn:hover {
+        transform: translateY(-1px);
+      }
+
+      #addMobileBtn {
+        background: #eaf6ef;
+        color: var(--success);
+      }
+
+      .remove-btn {
+        min-width: 46px;
+        min-height: 46px;
+        padding: 0 14px;
+        border: none;
+        border-radius: 14px;
+        background: #ffe7e5;
+        color: var(--danger);
+        font-size: 1.25rem;
+        font-weight: 800;
+        cursor: pointer;
+        box-shadow: 0 10px 18px rgba(185, 62, 62, 0.1);
+      }
+
+      #calculateBtn {
+        width: 100%;
+        margin-top: 18px;
+        padding: 16px 18px;
+        border: none;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #c7792b, #a85c18);
+        color: #ffffff;
+        font-size: 1rem;
+        font-weight: 800;
+        cursor: pointer;
+        box-shadow: 0 18px 30px rgba(199, 121, 43, 0.22);
+      }
+
+      #calculationArea {
+        margin-top: 18px;
+        padding: 24px;
+        border: 1px solid rgba(15, 76, 129, 0.12);
+        border-radius: 24px;
+        background: linear-gradient(180deg, #ffffff, #eef4fb);
+      }
+
+      #calculationArea .calc-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 16px;
+        align-items: center;
+        padding: 12px 0;
+      }
+
+      #calculationArea .calc-row label,
+      #calculationArea .calc-row span:first-child {
+        margin-bottom: 0;
+        font-weight: 700;
+      }
+
+      #calculationArea .calc-row input[type="number"] {
+        max-width: 160px;
+        text-align: right;
+        justify-self: end;
+      }
+
+      #calculationArea .calc-total {
+        margin-top: 10px;
+        padding-top: 18px;
+        border-top: 1px solid var(--border-strong);
+        color: var(--primary-dark);
+        font-size: 1.18rem;
+        font-weight: 800;
+      }
+
+      #calculationArea .calc-note,
+      .installment-note {
+        color: var(--muted);
+        font-size: 0.9rem;
+        line-height: 1.55;
+      }
+
+      #calculationArea .calc-note {
+        padding: 12px 14px 0;
+      }
+
+      .installment-note {
+        margin-top: 10px;
+      }
+
+      .terms-box {
+        max-height: 420px;
+        overflow-y: auto;
+        padding: 24px;
+        margin-top: 6px;
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        background: linear-gradient(180deg, #fcfdff, #f4f7fb);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+        font-size: 0.93rem;
+        line-height: 1.75;
+      }
+
+      .terms-box h3 {
+        margin: 16px 0 10px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid rgba(20, 33, 61, 0.12);
+        color: var(--primary-dark);
+        font-size: 1.16rem;
+      }
+
+      .terms-box h4 {
+        margin: 14px 0 6px;
+        color: #293754;
+        font-size: 1.04rem;
+      }
+
+      .terms-box h5 {
+        margin: 12px 0 6px;
+        color: #40516f;
+        font-size: 0.96rem;
+        font-weight: 800;
+      }
+
+      .terms-box p {
+        margin-bottom: 10px;
+      }
+
+      .terms-box ul,
+      .terms-box ol {
+        margin-left: 22px;
+        padding: 6px 0 12px;
+      }
+
+      .terms-box li {
+        margin-bottom: 6px;
+      }
+
+      .terms-box table {
+        width: 100%;
+        margin: 16px 0;
+        border-collapse: collapse;
+        overflow: hidden;
+        border-radius: 16px;
+      }
+
+      .terms-box th,
+      .terms-box td {
+        padding: 12px;
+        border: 1px solid rgba(20, 33, 61, 0.1);
+        text-align: left;
+      }
+
+      .terms-box th {
+        background: #eaf0f7;
+        font-weight: 800;
+      }
+
+      .terms-agree-group {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 18px;
+        padding: 18px;
+        border: 1px solid rgba(15, 76, 129, 0.12);
+        border-radius: 20px;
+        background: linear-gradient(90deg, #eef6ff, #f7f9ff);
+      }
+
+      .terms-agree-group input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--primary);
+      }
+
+      .terms-agree-group label {
+        margin-bottom: 0;
+        color: var(--primary-dark);
+        font-weight: 800;
+      }
+
+      .action-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      #submitBtn,
+      #downloadPdfBtn {
+        width: 100%;
+        padding: 18px 22px;
+        border: none;
+        border-radius: 20px;
+        color: #ffffff;
+        font-size: 1.02rem;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      #submitBtn {
+        background: linear-gradient(135deg, var(--primary), #153b64);
+        box-shadow: 0 18px 32px rgba(15, 76, 129, 0.22);
+      }
+
+      #downloadPdfBtn {
+        background: linear-gradient(135deg, var(--success), #17563c);
+        box-shadow: 0 18px 32px rgba(31, 122, 83, 0.2);
+      }
+
+      #submitBtn:disabled,
+      #downloadPdfBtn:disabled {
+        opacity: 0.68;
+        cursor: not-allowed;
+        box-shadow: none;
+        transform: none;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      #status {
+        display: none;
+        margin-top: 6px;
+        min-height: 64px;
+        padding: 16px 18px;
+        border: 1px dashed rgba(15, 76, 129, 0.18);
+        border-radius: 20px;
+        background: rgba(248, 250, 253, 0.96);
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      #status:not(:empty) {
+        display: block;
+      }
+
+      #status.success {
+        background: var(--success-soft);
+        border-color: rgba(31, 122, 83, 0.24);
+        color: #155239;
+      }
+
+      #status.error {
+        background: var(--danger-soft);
+        border-color: rgba(185, 62, 62, 0.24);
+        color: #8b2f2f;
+      }
+
+      #status.warning {
+        background: #fff7e6;
+        border-color: rgba(199, 121, 43, 0.26);
+        color: #805016;
+      }
+
+      .status-spinner,
+      .enquiry-spinner {
+        display: inline-block;
+        width: 17px;
+        height: 17px;
+        margin-right: 9px;
+        border: 2px solid rgba(199, 77, 133, 0.18);
+        border-top-color: var(--primary);
+        border-radius: 999px;
+        vertical-align: -3px;
+        animation: spin 0.72s linear infinite;
+      }
+
+      .status-spinner.small {
+        width: 14px;
+        height: 14px;
+        margin-right: 7px;
+        border-width: 2px;
+      }
+
+      .toast-stack {
+        position: fixed;
+        top: 18px;
+        right: 18px;
+        z-index: 70;
+        display: grid;
+        gap: 10px;
+        width: min(360px, calc(100vw - 28px));
+        pointer-events: none;
+      }
+
+      .toast {
+        padding: 14px 16px;
+        border: 1px solid rgba(199, 77, 133, 0.18);
+        border-radius: 18px;
+        background: rgba(255, 252, 255, 0.96);
+        color: var(--text);
+        box-shadow: 0 18px 38px rgba(143, 47, 96, 0.18);
+        font-weight: 800;
+        transform: translateY(-8px);
+        opacity: 0;
+        animation: toastIn 0.22s ease forwards;
+      }
+
+      .toast.success {
+        background: linear-gradient(135deg, #fff9fc, #edf8ef);
+        color: #245b3b;
+      }
+
+      .toast.error {
+        background: linear-gradient(135deg, #fff7fb, #fff1f6);
+        color: #8f375d;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      @keyframes toastIn {
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes autofillPulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(199, 77, 133, 0.24);
+        }
+        55% {
+          box-shadow: 0 0 0 7px rgba(199, 77, 133, 0.12);
+        }
+        100% {
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.74);
+        }
+      }
+
+      :root {
+        --bg-top: #fff7fb;
+        --bg-bottom: #ffe7f1;
+        --surface: rgba(255, 252, 255, 0.92);
+        --surface-strong: #7f2d58;
+        --surface-muted: #fff2f8;
+        --border: rgba(193, 92, 138, 0.18);
+        --border-strong: rgba(170, 77, 120, 0.28);
+        --text: #4e2540;
+        --muted: #836275;
+        --primary: #c74d85;
+        --primary-dark: #8f2f60;
+        --accent: #ff90ba;
+        --accent-soft: #ffe2ee;
+        --success: #5d8d66;
+        --success-soft: #edf8ef;
+        --danger: #bc4f78;
+        --danger-soft: #fff1f6;
+        --shadow-lg: 0 32px 72px rgba(152, 77, 117, 0.18);
+        --shadow-md: 0 18px 38px rgba(168, 95, 132, 0.14);
+      }
+
+      body {
+        position: relative;
+        overflow-x: hidden;
+        background:
+          radial-gradient(circle at 10% 8%, rgba(255, 190, 215, 0.46), transparent 24%),
+          radial-gradient(circle at 86% 10%, rgba(255, 218, 233, 0.72), transparent 20%),
+          radial-gradient(circle at 76% 78%, rgba(222, 122, 173, 0.2), transparent 26%),
+          linear-gradient(180deg, #fff8fc 0%, #ffeaf3 50%, #fff6fa 100%);
+      }
+
+      body::before,
+      body::after {
+        content: "";
+        position: fixed;
+        border-radius: 999px;
+        pointer-events: none;
+        z-index: 0;
+        filter: blur(28px);
+      }
+
+      body::before {
+        width: 420px;
+        height: 420px;
+        top: -150px;
+        left: -170px;
+        background: radial-gradient(circle, rgba(255, 195, 218, 0.7), transparent 68%);
+      }
+
+      body::after {
+        width: 360px;
+        height: 360px;
+        right: -120px;
+        bottom: -140px;
+        background: radial-gradient(circle, rgba(255, 220, 234, 0.76), transparent 70%);
+      }
+
+      .floral-stage {
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .flower {
+        position: absolute;
+        aspect-ratio: 1;
+        opacity: 0.42;
+        filter: drop-shadow(0 16px 24px rgba(174, 89, 129, 0.16));
+        background:
+          radial-gradient(circle at 50% 50%, rgba(180, 72, 117, 0.95) 0 13%, transparent 14%),
+          radial-gradient(circle at 50% 6%, rgba(255, 205, 223, 0.96) 0 28%, transparent 29%),
+          radial-gradient(circle at 94% 50%, rgba(255, 191, 215, 0.92) 0 28%, transparent 29%),
+          radial-gradient(circle at 50% 94%, rgba(255, 205, 223, 0.96) 0 28%, transparent 29%),
+          radial-gradient(circle at 6% 50%, rgba(255, 191, 215, 0.92) 0 28%, transparent 29%),
+          radial-gradient(circle at 23% 23%, rgba(255, 227, 236, 0.96) 0 24%, transparent 25%),
+          radial-gradient(circle at 77% 23%, rgba(255, 219, 232, 0.96) 0 24%, transparent 25%),
+          radial-gradient(circle at 23% 77%, rgba(255, 219, 232, 0.96) 0 24%, transparent 25%),
+          radial-gradient(circle at 77% 77%, rgba(255, 227, 236, 0.96) 0 24%, transparent 25%);
+      }
+
+      .flower::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        bottom: -52px;
+        width: 3px;
+        height: 90px;
+        border-radius: 999px;
+        background: linear-gradient(180deg, rgba(122, 164, 110, 0), rgba(122, 164, 110, 0.56));
+        transform: translateX(-50%) rotate(12deg);
+      }
+
+      .flower-one {
+        top: 38px;
+        left: -28px;
+        width: 210px;
+        transform: rotate(-18deg);
+      }
+
+      .flower-two {
+        top: 110px;
+        right: -26px;
+        width: 156px;
+        transform: rotate(12deg);
+      }
+
+      .flower-three {
+        bottom: 104px;
+        left: -44px;
+        width: 184px;
+        transform: rotate(8deg);
+      }
+
+      .flower-four {
+        right: 18px;
+        bottom: -12px;
+        width: 220px;
+        transform: rotate(-14deg);
+      }
+
+      .page-shell {
+        position: relative;
+        z-index: 1;
+        isolation: isolate;
+      }
+
+      .hero-panel {
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        background:
+          radial-gradient(circle at top right, rgba(255, 255, 255, 0.18), transparent 28%),
+          linear-gradient(135deg, rgba(116, 27, 72, 0.98), rgba(199, 73, 126, 0.92) 56%, rgba(255, 182, 211, 0.9) 100%);
+        box-shadow: 0 34px 78px rgba(151, 74, 117, 0.26);
+      }
+
+      .hero-panel::before {
+        width: 320px;
+        height: 320px;
+        top: -144px;
+        right: -112px;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.3), transparent 70%);
+      }
+
+      .hero-panel::after {
+        width: 260px;
+        height: 260px;
+        left: 44%;
+        bottom: -126px;
+        background: radial-gradient(circle, rgba(255, 220, 233, 0.42), transparent 72%);
+      }
+
+      .eyebrow {
+        border-color: rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.14);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      }
+
+      .hero-copy h1,
+      .form-title {
+        font-family: "Cormorant Garamond", Georgia, serif;
+      }
+
+      .hero-copy h1 {
+        font-size: clamp(2.7rem, 5.4vw, 4.8rem);
+        line-height: 0.98;
+      }
+
+      .hero-copy p {
+        color: rgba(255, 247, 252, 0.9);
+      }
+
+      .hero-chip {
+        background: rgba(255, 255, 255, 0.16);
+        border-color: rgba(255, 255, 255, 0.22);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      }
+
+      .hero-stat {
+        background: rgba(255, 255, 255, 0.14);
+        border-color: rgba(255, 255, 255, 0.18);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      }
+
+      #formContainer {
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 244, 249, 0.9));
+        border-color: rgba(255, 255, 255, 0.82);
+        box-shadow: 0 28px 60px rgba(156, 83, 122, 0.18);
+      }
+
+      .form-intro {
+        border-bottom-color: rgba(199, 77, 133, 0.14);
+      }
+
+      .form-kicker,
+      .form-note-label {
+        color: var(--primary-dark);
+      }
+
+      .form-note {
+        border-color: rgba(199, 77, 133, 0.16);
+        background: linear-gradient(135deg, rgba(255, 238, 245, 0.96), rgba(255, 221, 234, 0.82));
+        box-shadow: 0 18px 34px rgba(185, 95, 136, 0.13);
+      }
+
+      .form-section {
+        position: relative;
+        overflow: hidden;
+        border-color: rgba(191, 90, 136, 0.14);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(255, 242, 248, 0.92));
+        box-shadow: 0 20px 40px rgba(173, 93, 132, 0.1);
+      }
+
+      .form-section::after {
+        content: "";
+        position: absolute;
+        top: -28px;
+        right: -18px;
+        width: 120px;
+        height: 120px;
+        border-radius: 999px;
+        background:
+          radial-gradient(circle at 50% 50%, rgba(184, 72, 117, 0.18) 0 13%, transparent 14%),
+          radial-gradient(circle at 50% 8%, rgba(255, 223, 235, 0.52) 0 26%, transparent 27%),
+          radial-gradient(circle at 92% 50%, rgba(255, 223, 235, 0.48) 0 26%, transparent 27%),
+          radial-gradient(circle at 50% 92%, rgba(255, 223, 235, 0.52) 0 26%, transparent 27%),
+          radial-gradient(circle at 8% 50%, rgba(255, 223, 235, 0.48) 0 26%, transparent 27%);
+        opacity: 0.88;
+      }
+
+      .section-number {
+        background: linear-gradient(135deg, #ffe8f1, #ffd3e5);
+        color: var(--primary-dark);
+        box-shadow: inset 0 0 0 1px rgba(199, 77, 133, 0.18), 0 10px 18px rgba(199, 77, 133, 0.12);
+      }
+
+      label {
+        color: #5c2745;
+      }
+
+      input[type="text"],
+      input[type="date"],
+      input[type="tel"],
+      input[type="email"],
+      input[type="number"],
+      input[type="file"],
+      select,
+      textarea {
+        background: rgba(255, 253, 254, 0.98);
+        border-color: rgba(191, 92, 138, 0.16);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.74);
+      }
+
+      input:hover,
+      select:hover,
+      textarea:hover {
+        border-color: rgba(199, 77, 133, 0.38);
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        border-color: rgba(199, 77, 133, 0.58);
+        box-shadow: 0 0 0 4px rgba(199, 77, 133, 0.12);
+      }
+
+      input[readonly] {
+        background: linear-gradient(180deg, #fff1f7, #fde7f0);
+        color: #86546d;
+      }
+
+      input[type="file"] {
+        background: rgba(255, 247, 251, 0.98);
+      }
+
+      input[type="file"]::file-selector-button {
+        background: #ffe1ec;
+        color: var(--primary-dark);
+      }
+
+      input[type="file"]::file-selector-button:hover {
+        background: #ffd3e4;
+      }
+
+      .fee-entry,
+      .installment-entry {
+        border-color: rgba(199, 77, 133, 0.16);
+        background: linear-gradient(180deg, rgba(255, 246, 250, 0.95), rgba(255, 236, 244, 0.9));
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+      }
+
+      .add-btn {
+        background: linear-gradient(135deg, #ffe6f0, #ffd6e5);
+        color: var(--primary-dark);
+        box-shadow: 0 12px 24px rgba(199, 77, 133, 0.16);
+      }
+
+      #addMobileBtn {
+        background: linear-gradient(135deg, #f9e7ff, #ffd8eb);
+        color: #9a3867;
+      }
+
+      .remove-btn {
+        background: linear-gradient(135deg, #ffe8f0, #ffd4e2);
+        color: #bc4f78;
+        box-shadow: 0 10px 18px rgba(188, 79, 120, 0.14);
+      }
+
+      #calculateBtn {
+        background: linear-gradient(135deg, #ff9fc3, #d95a94);
+        box-shadow: 0 18px 34px rgba(201, 84, 136, 0.28);
+      }
+
+      #calculationArea {
+        border-color: rgba(199, 77, 133, 0.16);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(255, 236, 244, 0.94));
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
+      }
+
+      #calculationArea .calc-total {
+        color: var(--primary-dark);
+      }
+
+      #calculationArea .calc-note,
+      .installment-note {
+        color: #805f71;
+      }
+
+      .terms-box {
+        border-color: rgba(191, 92, 138, 0.14);
+        background: linear-gradient(180deg, #fffdfd, #fff2f7);
+      }
+
+      .terms-box h3 {
+        border-bottom-color: rgba(199, 77, 133, 0.16);
+      }
+
+      .terms-box h4 {
+        color: #7c3159;
+      }
+
+      .terms-box h5 {
+        color: #9a5475;
+      }
+
+      .terms-box th,
+      .terms-box td {
+        border-color: rgba(173, 83, 124, 0.12);
+      }
+
+      .terms-box th {
+        background: #ffe7f0;
+      }
+
+      .terms-agree-group {
+        border-color: rgba(199, 77, 133, 0.16);
+        background: linear-gradient(90deg, #fff0f6, #ffe3ee);
+      }
+
+      #submitBtn {
+        background: linear-gradient(135deg, #c94e86, #8f2f60);
+        box-shadow: 0 18px 32px rgba(168, 61, 111, 0.28);
+      }
+
+      #downloadPdfBtn {
+        background: linear-gradient(135deg, #f58ab3, #d74e87);
+        box-shadow: 0 18px 32px rgba(215, 78, 135, 0.24);
+      }
+
+      #status {
+        border-color: rgba(199, 77, 133, 0.22);
+        background: rgba(255, 248, 251, 0.96);
+      }
+
+      #status.error {
+        border-color: rgba(188, 79, 120, 0.24);
+        color: #8f375d;
+      }
+
+      body.modal-open {
+        overflow: hidden;
+      }
+
+      .form-note-actions {
+        margin-top: 16px;
+      }
+
+      .fetch-enquiry-btn,
+      .enquiry-fetch-btn,
+      .enquiry-modal-close {
+        transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease, background-color 0.18s ease;
+      }
+
+      .fetch-enquiry-btn {
+        width: 100%;
+        padding: 14px 18px;
+        border: none;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #c74d85, #8f2f60);
+        color: #ffffff;
+        font-size: 0.96rem;
+        font-weight: 800;
+        cursor: pointer;
+        box-shadow: 0 18px 32px rgba(143, 47, 96, 0.24);
+      }
+
+      .fetch-enquiry-btn:hover,
+      .enquiry-fetch-btn:hover,
+      .enquiry-modal-close:hover {
+        transform: translateY(-1px);
+      }
+
+      .fetch-enquiry-btn:disabled,
+      .enquiry-fetch-btn:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+        box-shadow: none;
+        transform: none;
+      }
+
+      .enquiry-modal-overlay {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: rgba(86, 38, 64, 0.28);
+        backdrop-filter: blur(14px);
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity 0.24s ease, visibility 0.24s ease;
+        z-index: 50;
+      }
+
+      .enquiry-modal-overlay.is-open {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+      }
+
+      .enquiry-modal {
+        width: min(1080px, 100%);
+        max-height: min(84vh, 820px);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.55);
+        border-radius: 30px;
+        background: linear-gradient(180deg, rgba(255, 252, 255, 0.9), rgba(255, 245, 250, 0.84));
+        box-shadow: 0 34px 72px rgba(123, 57, 89, 0.26);
+        transform: translateY(22px) scale(0.98);
+        transition: transform 0.24s ease;
+      }
+
+      .enquiry-modal-overlay.is-open .enquiry-modal {
+        transform: translateY(0) scale(1);
+      }
+
+      .enquiry-modal-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 26px 28px 18px;
+      }
+
+      .enquiry-modal-title {
+        margin-bottom: 8px;
+        font-family: "Fraunces", Georgia, serif;
+        font-size: clamp(1.6rem, 3vw, 2.2rem);
+        line-height: 1.08;
+        letter-spacing: -0.02em;
+      }
+
+      .enquiry-modal-subtitle {
+        color: var(--muted);
+      }
+
+      .enquiry-modal-close {
+        flex: 0 0 auto;
+        min-width: 48px;
+        min-height: 48px;
+        border: none;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.82);
+        color: var(--primary-dark);
+        font-size: 1.45rem;
+        font-weight: 800;
+        cursor: pointer;
+        box-shadow: 0 14px 28px rgba(143, 47, 96, 0.12);
+      }
+
+      .enquiry-modal-search {
+        padding: 0 28px 18px;
+      }
+
+      .enquiry-modal-search input {
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.9);
+      }
+
+      .enquiry-modal-content {
+        padding: 0 28px 28px;
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        gap: 16px;
+        min-height: 0;
+        overflow: hidden;
+      }
+
+      .enquiry-loading,
+      .enquiry-empty {
+        padding: 18px 20px;
+        border: 1px solid rgba(199, 77, 133, 0.14);
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.72);
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .enquiry-table-shell {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: auto;
+        border: 1px solid rgba(199, 77, 133, 0.14);
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.72);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
+      }
+
+      .enquiry-table {
+        width: 100%;
+        min-width: 980px;
+        border-collapse: collapse;
+      }
+
+      .enquiry-table th,
+      .enquiry-table td {
+        padding: 14px 16px;
+        border-bottom: 1px solid rgba(199, 77, 133, 0.12);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      .enquiry-table thead th {
+        position: sticky;
+        top: 0;
+        background: rgba(255, 241, 247, 0.94);
+        color: var(--primary-dark);
+        font-size: 0.85rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        z-index: 1;
+      }
+
+      .enquiry-table tbody tr:hover {
+        background: rgba(255, 232, 241, 0.5);
+      }
+
+      .enquiry-table tbody tr:last-child td {
+        border-bottom: none;
+      }
+
+      .enquiry-meta {
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .enquiry-result-meta {
+        color: #805f71;
+        font-size: 0.88rem;
+        font-weight: 800;
+      }
+
+      .enquiry-fetch-btn {
+        padding: 10px 16px;
+        border: none;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #c74d85, #8f2f60);
+        color: #ffffff;
+        font-size: 0.92rem;
+        font-weight: 800;
+        cursor: pointer;
+        box-shadow: 0 14px 24px rgba(143, 47, 96, 0.18);
+      }
+
+      @media (min-width: 760px) {
+        .form-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 920px) {
+        .hero-panel,
+        .form-intro {
+          grid-template-columns: 1fr;
+          display: grid;
+        }
+
+        .form-note {
+          min-width: 0;
+        }
+
+        .flower-three,
+        .flower-four {
+          display: none;
+        }
+      }
+
+      @media (max-width: 680px) {
+        .page-shell {
+          width: min(100%, calc(100% - 16px));
+          padding-top: 16px;
+          padding-bottom: 32px;
+        }
+
+        .hero-panel,
+        #formContainer,
+        .form-section {
+          padding: 20px;
+          border-radius: 24px;
+        }
+
+        .section-title {
+          align-items: flex-start;
+          font-size: 1.28rem;
+        }
+
+        .fee-entry,
+        .installment-entry,
+        .action-row,
+        #calculationArea .calc-row {
+          grid-template-columns: 1fr;
+        }
+
+        .mobile-input-group {
+          grid-template-columns: 1fr;
+        }
+
+        .terms-agree-group {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        #calculationArea .calc-row input[type="number"] {
+          max-width: none;
+          justify-self: stretch;
+          text-align: left;
+        }
+
+        .flower-one,
+        .flower-two {
+          opacity: 0.22;
+        }
+
+        .fetch-enquiry-btn {
+          width: 100%;
+        }
+
+        .enquiry-modal-overlay {
+          padding: 12px;
+        }
+
+        .enquiry-modal {
+          max-height: 88vh;
+          border-radius: 24px;
+        }
+
+        .enquiry-modal-header,
+        .enquiry-modal-search,
+        .enquiry-modal-content {
+          padding-left: 20px;
+          padding-right: 20px;
+        }
+
+        .enquiry-modal-header {
+          padding-top: 20px;
+          padding-bottom: 14px;
+        }
+
+        .enquiry-modal-search {
+          padding-bottom: 14px;
+        }
+
+        .enquiry-modal-content {
+          padding-bottom: 20px;
+        }
+
+        .toast-stack {
+          top: 10px;
+          right: 10px;
+          width: calc(100vw - 20px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="floral-stage" aria-hidden="true">
+      <span class="flower flower-one"></span>
+      <span class="flower flower-two"></span>
+      <span class="flower flower-three"></span>
+      <span class="flower flower-four"></span>
+    </div>
+    <div class="page-shell">
+      <header class="hero-panel">
+        <div class="hero-copy">
+          <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;">
+            <div style="width: 86px; height: 86px; border-radius: 50%; background: #ffffff; padding: 4px; box-shadow: 0 0 25px rgba(217, 119, 6, 0.45); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <img src="/tpc-logo.png" alt="The Prime Classes" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%;" onerror="this.onerror=null; this.src='/tpc-logo.jpg';">
+            </div>
+            <div>
+              <span class="eyebrow" style="margin-bottom: 6px; border-color: rgba(251, 191, 36, 0.4); color: #fde68a;">THE PRIME CLASSES • RIMC | RMS | SAINIK SCHOOL | FOUNDATION</span>
+              <h1 style="font-size: clamp(1.8rem, 3.5vw, 2.8rem); margin: 0; line-height: 1.15;">Admission Intake Portal</h1>
+            </div>
+          </div>
+          <p>Capture student admissions, supporting documents, fee planning, and instant PDF records from one professional workflow.</p>
+          <div class="hero-chip-list">
+            <span class="hero-chip">Unique Student ID on every save</span>
+            <span class="hero-chip">Instant admission PDF backup</span>
+            <span class="hero-chip">Fees and installments in one flow</span>
+          </div>
+        </div>
+        <div class="hero-side">
+          <div class="hero-stat">
+            <span>Student ID policy</span>
+            <strong>StudentsId is reserved at submission time and is never reused for another admission.</strong>
+          </div>
+          <div class="hero-stat">
+            <span>Operations</span>
+            <strong>Student profile, documents, fee structure, and final acknowledgment are saved in one pass.</strong>
+          </div>
+        </div>
+      </header>
+
+      <div id="formContainer">
+        <div class="form-intro">
+          <div>
+            <p class="form-kicker">Prime Classes Admissions</p>
+            <h2 class="form-title">Admission Application</h2>
+            <p class="form-subtitle">Complete the student profile, upload optional documents, configure fees, and confirm the declaration before submitting the record.</p>
+          </div>
+          <div class="form-note">
+            <span class="form-note-label">Secure ID</span>
+            <strong>The system generates StudentsId automatically after submission and skips any value that already exists.</strong>
+            <div class="form-note-actions">
+              <button type="button" id="fetchEnquiryBtn" class="fetch-enquiry-btn">Fetch from Enquiry</button>
+            </div>
+          </div>
+        </div>
+
+        <form id="admissionForm">
+        <!-- === SECTION 1: BASIC DETAILS === -->
+        <section class="form-section">
+          <h2 class="section-title"><span class="section-number">01</span> Basic Details</h2>
+          <p class="section-summary">Capture the student profile, parent details, class information, and core contact data.</p>
+          <div class="form-grid">
+            <!-- NEW: Application Date -->
+            <div class="form-group">
+              <label for="applicationDate">Date of Filling Application</label>
+              <input type="date" id="applicationDate" readonly>
+            </div>
+
+            <div class="form-group">
+              <label for="studentIdPreview">Student ID</label>
+              <input type="text" id="studentIdPreview" value="Generated automatically after secure submission" readonly>
+            </div>
+            
+            <div class="form-group">
+              <label for="studentName">Student Name</label>
+              <input type="text" id="studentName" required>
+            </div>
+            <div class="form-group">
+              <label for="fatherName">Father's Name</label>
+              <input type="text" id="fatherName" required>
+            </div>
+            <div class="form-group">
+              <label for="motherName">Mother's Name</label>
+              <input type="text" id="motherName" required>
+            </div>
+            <div class="form-group">
+              <label for="dob">Date of Birth</label>
+              <input type="date" id="dob" required>
+            </div>
+             <div class="form-group email-field">
+              <div class="floating-control">
+                <span class="field-icon" aria-hidden="true">&#9993;</span>
+                <input type="email" id="email" name="parentEmail" placeholder=" " autocomplete="email">
+                <label for="email">Parent Email Address</label>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="startSession">Start Session</label>
+              <input type="date" id="startSession" required>
+            </div>
+            <div class="form-group">
+              <label for="endSession">End Session</label>
+              <input type="date" id="endSession" required>
+            </div>
+            <div class="form-group full-width">
+              <label>Mobile Number(s)</label>
+              <div id="mobileContainer">
+                <div class="mobile-input-group">
+                  <input type="tel" class="mobile-input" placeholder="Primary mobile number" required>
+                </div>
+              </div>
+              <button type="button" id="addMobileBtn" class="add-btn">+ Add another number</button>
+            </div>
+            <div class="form-group">
+              <label for="caste">Category</label>
+              <select id="caste" required>
+                <option value="" disabled selected>Select category...</option>
+                <option value="General">General</option>
+                <option value="OBC">OBC</option>
+                <option value="SC">SC</option>
+                <option value="ST">ST</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="fatherOccupation">Father's Occupation</label>
+              <select id="fatherOccupation" required>
+                <option value="" disabled selected>Select occupation...</option>
+                <option value="Defence">Defence</option>
+                <option value="Government">Government</option>
+                <option value="Private">Private</option>
+                <option value="Business">Business</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <!-- Conditional Occupation Fields -->
+            <div id="defenceOptions" class="form-group hidden">
+              <label for="defenceService">Service</label>
+              <select id="defenceService">
+                <option value="" disabled selected>Select service...</option>
+                <option value="Army">Army</option>
+                <option value="Navy">Navy</option>
+                <option value="IAF">IAF (Air Force)</option>
+              </select>
+            </div>
+            <div id="explainJobOptions" class="form-group hidden">
+              <label for="jobDescription">Describe Occupation</label>
+              <textarea id="jobDescription" placeholder="Enter job title, department, or company"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="class">Current Class Studying</label>
+              <select id="class" required>
+                <option value="" disabled selected>Select class...</option>
+                <option value="Nursery">Nursery</option>
+                <option value="LKG">LKG</option>
+                <option value="UKG">UKG</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12">12</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="presentSchool">Present School</label>
+              <input type="text" id="presentSchool" placeholder="Name of current school">
+            </div>
+            <div class="form-group full-width">
+              <label for="completeAddress">Complete Address</label>
+              <textarea id="completeAddress" placeholder="Full residential address"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="advanceCheck">Advance Check</label>
+              <select id="advanceCheck" required>
+                <option value="" disabled selected>Select status...</option>
+                <option value="Submitted">Submitted</option>
+                <option value="Not Submitted">Not Submitted</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <!-- === SECTION 2: DOCUMENT UPLOAD (Now Optional) === -->
+        <section class="form-section">
+          <h2 class="section-title"><span class="section-number">02</span> Document Upload</h2>
+          <p class="section-summary">Attach supporting records for verification and internal documentation. All uploads remain optional.</p>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="photo">Student Photo (JPG/PNG only)</label>
+              <input type="file" id="photo" accept="image/jpeg,image/jpg,image/png"> <!-- removed required -->
+            </div>
+            <div class="form-group">
+              <label for="aadhaar">Aadhaar Card</label>
+              <input type="file" id="aadhaar" accept="application/pdf,image/*"> <!-- removed required -->
+            </div>
+            <div class="form-group">
+              <label for="dobCert">Birth Certificate</label>
+              <input type="file" id="dobCert" accept="application/pdf,image/*"> <!-- removed required -->
+            </div>
+            <div class="form-group">
+              <label for="domicile">Domicile Certificate</label>
+              <input type="file" id="domicile" accept="application/pdf,image/*"> <!-- removed required -->
+            </div>
+            <div class="form-group">
+              <label for="casteCert">Caste Certificate (if applicable)</label>
+              <input type="file" id="casteCert" accept="application/pdf,image/*">
+            </div>
+            <div class="form-group">
+              <label for="serviceCert">Service Certificate (if applicable)</label>
+              <input type="file" id="serviceCert" accept="application/pdf,image/*">
+            </div>
+          </div>
+        </section>
+        
+        <!-- === SECTION 3: FEES STRUCTURE (UPDATED) === -->
+        <section class="form-section">
+          <h2 class="section-title"><span class="section-number">03</span> Fees Structure</h2>
+          <p class="section-summary">Select the academic program, add fee components, calculate the payable amount, and set the installment plan.</p>
+          <div class="form-group full-width">
+            <label for="program">Select Program</label>
+            <select id="program" required>
+                <option value="" disabled selected>Loading programs...</option>
+             </select>
+          </div>
+          
+          <!-- Static Fee Fields -->
+          <div class="form-grid">
+            <!-- NEW: Registration Fee -->
+            <div class="form-group">
+              <label for="registrationFee">Registration Fee</label>
+              <input type="number" id="registrationFee" placeholder="Enter registration fee" min="0" step="0.01" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="tuitionFeeAmount">Tuition Fee</label>
+              <input type="number" id="tuitionFeeAmount" placeholder="Enter base tuition fee" min="0" step="0.01" required>
+            </div>
+          </div>
+
+          <!-- DYNAMIC: Other Fees Section -->
+          <div class="form-group full-width top-gap-sm">
+            <label>Add Other Fees (Books, Uniform, etc.)</label>
+            <div id="feeContainer">
+              <!-- Dynamic fee entries will be added here -->
+            </div>
+            <button type="button" id="addFeeBtn" class="add-btn">+ Add Fee Type</button>
+          </div>
+          
+          <button type="button" id="calculateBtn">Calculate Total</button>
+
+          <!-- Calculation Area (Updated with Scholarship and GST) -->
+          <div id="calculationArea" class="form-group full-width">
+            <div class="calc-row">
+              <span>Total Amount (All Fees):</span>
+              <span id="totalAmountDisplay">0.00</span>
+            </div>
+            <div class="calc-row">
+              <span>Registration Fee:</span>
+              <span id="registrationFeeDisplay">0.00</span>
+            </div>
+            <div class="calc-row">
+              <span>Discount &amp; GST Base (All Fees):</span>
+              <span id="discountBaseDisplay">0.00</span>
+            </div>
+            <p class="calc-note">Discount and GST are both calculated on the full total, including registration fee, tuition fee, and all other fees. Finance will still adjust the registration amount from the first installment later.</p>
+            <div class="calc-row">
+              <label for="discountPercent">Discount (%):</label>
+              <input type="number" id="discountPercent" value="0" min="0" max="100" step="0.01">
+            </div>
+            <div class="calc-row">
+              <span>Discount Amount on Full Total:</span>
+              <span id="discountAmountDisplay">0.00</span>
+            </div>
+            <div class="calc-row">
+              <label for="scholarshipAmount">Scholarship Amount:</label>
+              <input type="number" id="scholarshipAmount" value="0" min="0" step="0.01">
+            </div>
+            <div class="calc-row">
+              <label for="gstPercent">GST (%):</label>
+              <input type="number" id="gstPercent" value="0" min="0" max="100" step="0.01">
+            </div>
+            <div class="calc-row calc-total">
+              <span>Final Payable Amount:</span>
+              <span id="finalCostDisplay">0.00</span>
+            </div>
+            <input type="hidden" id="totalAmountInput">
+            <input type="hidden" id="finalCostInput">
+          </div>
+          
+          <!-- NEW: DYNAMIC Installment Section -->
+          <div class="form-group full-width top-gap-lg">
+            <h3>Installment Plan</h3>
+            <label>Add Installment Payments</label>
+            <p class="installment-note">The first installment amount must be greater than the registration fee because finance will deduct the registration amount from it later.</p>
+            <div id="installmentContainer">
+              <!-- Dynamic installment entries will be added here -->
+            </div>
+            <button type="button" id="addInstallmentBtn" class="add-btn">+ Add Installment</button>
+          </div>
+        </section>
+        
+        <!-- === SECTION 4: TERMS & CONDITIONS === -->
+        <section class="form-section">
+          <h2 class="section-title"><span class="section-number">04</span> Terms and Conditions</h2>
+          <p class="section-summary">Review the policy details carefully and record consent before submitting the admission.</p>
+          <div class="terms-box">
+            
+            <h3>1. Introduction</h3>
+            <h4>1.1 Welcome Message</h4>
+            <p>Welcome to The Prime Classes—a distinguished institute focused on preparing young minds for entrance exams that lead to promising careers in India’s armed forces and other prestigious institutions. Since our founding in 2016, we have remained steadfast in our mission to empower students with the skills, knowledge, and values required for academic excellence and personal growth.</p>
+            <p>Our core purpose at The Prime Classes is to create a foundation for success, helping students qualify for admissions to some of the nation’s most reputable institutions, such as Sainik Schools, Rashtriya Military Schools, Rashtriya Indian Military College (RIMC), National Defence Academy (NDA), and Navodaya Vidyalayas. Through comprehensive training, discipline, and guidance, we provide the tools for students to meet and exceed the challenges posed by these highly competitive exams. Beyond academics, we emphasize character building, instilling the values of respect, discipline, integrity, and resilience, which form the basis of a successful life and career.</p>
+            <p>We understand that the journey to success is a collaborative one, requiring the support and involvement of both parents and educators. This agreement outlines our collective commitment to creating a learning environment that is challenging, supportive, and purposeful. Together, we will guide each student toward academic achievement, personal development, and a fulfilling path of service to the nation.</p>
+            <p>Welcome to The Prime Classes family. We look forward to working together to nurture young minds and shape the leaders of tomorrow.</p>
+
+            <h4>1.2 Institute Overview</h4>
+            <p>Founded in 2016 , The Prime Classes has established itself as a trusted name in education across Madhya Pradesh, known for consistent achievements in competitive exams preparation and the success of our students in securing admissions to top-ranking institutions. With a dedicated team of educators and a well-designed curriculum, The Prime Classes has been instrumental in helping students achieve top ranks and fulfill their dreams of joining esteemed institutions and the armed forces.</p>
+            <p>The Prime Classes offers specialized coaching for entrance exams to institutions that demand rigorous preparation and a high level of personal commitment. Our programs are tailored to provide a strong foundation in the core subjects necessary for success in entrance exams, such as Mathematics, English, Science, and Reasoning. Additionally, our curriculum includes critical thinking, problem-solving, and leadership development, ensuring that students are not only academically prepared but also mentally resilient.</p>
+            <p>Our programs are structured into various batches, including Foundation and Pre-Foundation batches, that cater to students at different levels and ages. By offering early preparation for younger students, we give them a head start in understanding the format, challenges, and expectations of these competitive exams. Each program is designed to be progressive, so as students advance, they acquire deeper knowledge, skills, and confidence, ensuring they are fully prepared by the time they take their entrance exams.</p>
+            <p>The Prime Classes is not just an institute but a community where students learn to aspire, excel, and contribute. Our faculty comprises experienced professionals who are dedicated to providing personalized attention to each student, guiding them through every step of their educational journey.</p>
+
+            <h4>1.3 Mission, Vision, and Core Values</h4>
+            <p><strong>Mission</strong> Our mission at The Prime Classes is clear: to offer a high-quality, structured education that prepares students academically and morally for careers of significance and service. We aim to create a learning environment where students are encouraged to reach their full potential and are equipped with the skills, knowledge, and resilience necessary to succeed in demanding careers within the armed forces and other national service roles. We are driven by the goal of enabling each student to make a meaningful contribution to society through their commitment to excellence, integrity, and service.</p>
+            <p><strong>Vision</strong> Our vision is to shape future leaders who serve India with pride, confidence, and dedication. We aspire to create a generation of young men and women who are equipped with the intellectual, emotional, and ethical qualities needed to navigate the challenges of leadership. By preparing students not only for entrance exams but also for life beyond the classroom, The Prime Classes aims to foster individuals who make a lasting impact on society, inspire others, and take on roles of responsibility in the defense forces and other prestigious fields.</p>
+            <p><strong>Core Values</strong> The Prime Classes is guided by four core values that define our approach to education and our expectations of our students:</p>
+            <ul>
+                <li><strong>Excellence in Education :</strong> We are committed to upholding the highest academic standards, providing each student with rigorous, thorough preparation for exams that demand knowledge, skill, and understanding. Our goal is to develop capable, confident students who are ready to face any academic challenge.</li>
+                <li><strong>Integrity and Respect :</strong> At The Prime Classes, we believe in teaching our students to lead with honor and respect for themselves, their peers, and society. We instill these values through a respectful learning environment and by modeling the behaviors we expect of our students.</li>
+                <li><strong>Discipline and Resilience :</strong> Discipline is the foundation of achievement, and we emphasize the importance of structured, consistent effort in every part of our program. Resilience, or the ability to face challenges and overcome obstacles, is equally critical. We aim to develop both qualities in our students to prepare them for the demands of a competitive academic and career landscape.</li>
+                <li><strong>Lifelong Learning and Growth :</strong> Beyond preparing students for exams, we foster a love for learning that lasts a lifetime. We believe that continuous improvement and curiosity are essential to personal and professional growth, and we encourage students to embrace challenges and strive for improvement in all aspects of life.</li>
+            </ul>
+
+            <h4>1.4 Purpose and Scope of the Agreement</h4>
+            <p>The purpose of this agreement is to create a clear framework that defines the roles, responsibilities, and expectations for parents, students, and The Prime Classes. By establishing these guidelines, we ensure that each student’s journey is supported by a collaborative and structured environment that enhances both academic achievement and personal growth.</p>
+            <p><strong>Objectives of the Agreement</strong></p>
+            <ul>
+                <li><strong>Define Roles and Responsibilities :</strong> The agreement outlines the roles and responsibilities of parents, students, and The Prime Classes. This clarity helps all parties understand what is expected of them and how they can contribute to the student’s success.</li>
+                <li><strong>Encourage Partnership and Open Communication :</strong> Success in education is a collaborative effort, and this agreement encourages parents and the institute to work together for the child’s benefit. We promote open lines of communication to address any concerns, provide feedback, and celebrate achievements.</li>
+                <li><strong>Promote a Safe, Supportive, and Disciplined Environment :</strong> A safe, inclusive, and positive learning environment is essential for effective education. This agreement reinforces the institute’s commitment to providing such an environment and highlights the expectations for students to maintain respect and discipline within the institute.</li>
+                <li><strong>Reinforce Discipline and Core Values :</strong> Discipline, integrity, respect, and resilience are values that are critical for success, especially in the fields The Prime Classes prepares students for. This agreement emphasizes these values, ensuring that students, parents, and faculty align on the importance of maintaining these standards throughout the educational journey.</li>
+                <li><strong>Outline Financial and Academic Policies :</strong> The agreement includes guidelines on tuition fees, attendance, homework, exams, and other academic responsibilities to ensure transparency. Parents and students are informed about all policies and can plan accordingly to meet these requirements.</li>
+            </ul>
+            <p>By agreeing to these terms, parents, students, and The Prime Classes pledge to uphold the commitments needed to create a successful educational experience. This agreement serves as the foundation for a purposeful and enriching journey, preparing students to excel academically, grow personally, and ultimately become future leaders who contribute to the betterment of society and the nation.</p>
+
+            <h3>2. Enrollment Process and Fee Structure</h3>
+            <h4>2.1 Admission and Eligibility Criteria</h4>
+            <p>The Prime Classes has structured its programs to support academic growth at each level, beginning with foundational learning and progressing to rigorous exam preparation. Eligibility requirements are tailored to ensure that students enter programs that align with their academic level and goals, maximizing their potential for success.</p>
+            <p><strong>Eligibility Requirements:</strong></p>
+            <ul>
+                <li><strong>Classes 3 (Pre-Foundation Program) :</strong> The Pre-Foundation Program is open to students in Classes 3 and 4. It emphasizes fundamental learning across core subjects, fostering early academic skills and preparing students for a gradual transition into competitive exam preparation.</li>
+                <li><strong>Class 4 (Foundation Program) :</strong> Students entering Class 5 are eligible for the Foundation Program, where they begin structured preparation for competitive exams. This program introduces more focused learning in subjects critical to entrance exams, building the groundwork for advanced study.</li>
+                <li><strong>Classes 6 (Junior Program) :</strong> Students in Classes 6 and 7 are eligible for the Junior Program. Here, instruction becomes more intensive, focusing on critical subjects and examination strategies that equip students with skills for exams like Sainik Schools, Rashtriya Military Schools, and RIMC.</li>
+                <li><strong>Class 8 (Senior Program) :</strong> The SeniorProgram caters to students in Class 8, providing comprehensive training for competitive entrance exams like AISSEE ,R.M.S. This program includes detailed coursework, strategic study plans, and targeted assessments, preparing students for high-level exams and future academic challenges.</li>
+                <li><strong>Class 7 (RIMC) :</strong> The RIMC Program at The Prime Classes is designed specifically for students in Class 8, focusing on preparing them for the highly competitive Rashtriya Indian Military College (RIMC) entrance exam. This program provides an intensive learning experience, strategically equipping students with the skills and knowledge necessary to meet the unique demands of the RIMC selection process.</li>
+            </ul>
+            <p>This structure allows The Prime Classes to deliver specialized education that matches students’ academic stages and ensures a progressive build-up of knowledge, skills, and discipline.</p>
+
+            <h5>2.1.1 Required Documents</h5>
+            <p>The Prime Classes requires certain documents for student verification and record-keeping, ensuring that all enrolled students meet the required criteria for admission.</p>
+            <p><strong>Documents Required for Admission :</strong></p>
+            <ul>
+                <li><strong>Birth Certificate :</strong> Validates the student’s age eligibility for the program.</li>
+                <li><strong>Aadhaar Card :</strong> Provides a verified identity document for each student.</li>
+                <li><strong>Parent’s Employment Proof (for defense categories):</strong> For students applying under defense-related categories, a certificate or identification of the parent’s employment in the defense sector.</li>
+                <li><strong>Residence Certificate (Nivas Praman Patra) :</strong> Confirms the student’s local residence, necessary for residency requirements in specific admission categories.</li>
+                <li><strong>Domicile Certificate (Mul Nivas Praman Patra) :</strong> Verifies the family’s state of residence, applicable to certain admission requirements.</li>
+                <li><strong>Ration Card (optional):</strong> Serves as an additional proof of residence and family identification.</li>
+                <li><strong>Photographs :</strong> Two to four recent passport-sized photographs.</li>
+                <li><strong>Previous School Marksheet :</strong> Required to confirm academic history and successful completion of the previous class.</li>
+            </ul>
+            <p>Each document is essential to complete the enrollment process and ensure compliance with educational standards and program eligibility.</p>
+
+            <h5>2.1.2 Admission Steps and Deadlines</h5>
+            <p>The Prime Classes ensures that the admission process is straightforward, transparent, and efficient, allowing parents and students to complete the necessary steps with guidance from our admissions team.</p>
+            <p><strong>Step-by-Step Admission Process :</strong></p>
+            <ol>
+                <li><strong>Initial Registration :</strong> The first step in the admission process is to complete the registration form. This step secures the student’s place for 7 days, allowing families the opportunity to evaluate the program before finalizing enrollment.</li>
+                <li><strong>Document Submission and Initial Payment :</strong> Once registration is complete, the documents outlined in Section 2.1.1 should be submitted for verification. In addition to document submission, an initial portion of the admission and tuition fees is required to confirm the student’s enrollment.</li>
+                <li><strong>Exam-Specific Application Deadlines :</strong> Students preparing for specific entrance exams such as Sainik School, RIMC, or NDA may have additional application deadlines set by government authorities. The Prime Classes provides support with filling out and submitting these forms promptly to ensure compliance with deadlines.</li>
+            </ol>
+            <p>All necessary forms, documents, and fees must be completed by the given deadlines to secure the student’s place and begin instruction as scheduled.</p>
+
+            <h4>2.2 Comprehensive Fee Structure</h4>
+            <p>The Prime Classes adopts a clear, itemized fee structure to allow parents a complete understanding of the financial commitment involved in their child’s education. Each component contributes to different aspects of the program, from core academics to resources, facilities, and special services.</p>
+            
+            <!-- Table updated to remove cost column -->
+            <table>
+              <thead>
+                <tr>
+                  <th>Fee Type</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Admission Fee</td>
+                  <td>A one-time charge to secure enrollment, covering registration and administrative costs</td>
+                </tr>
+                <tr>
+                  <td>Tuition Fee</td>
+                  <td>Provides for academic instruction, mentorship, and curriculum support</td>
+                </tr>
+                <tr>
+                  <td>Book Fee</td>
+                  <td>Covers textbooks, workbooks, and additional study resources</td>
+                </tr>
+                <tr>
+                  <td>Infrastructure Fee</td>
+                  <td>Supports the maintenance and improvement of the institute’s facilities</td>
+                </tr>
+                <tr>
+                  <td>Uniform Fee</td>
+                  <td>Includes required uniform items, promoting discipline and unity</td>
+                </tr>
+                <tr>
+                  <td>Examination Fee</td>
+                  <td>Covers regular Sunday exams and additional assessments throughout the year</td>
+                </tr>
+                <tr>
+                  <td>Technology Fee</td>
+                  <td>Provides access to digital resources, online study tools, and tech support</td>
+                </tr>
+              </tbody>
+            </table>
+            
+            <!-- Program options updated to remove costs -->
+            <p><strong>Program Options and Associated Fees :</strong></p>
+            <ul>
+                <li>Full-time Boarding Program (8 hours daily)</li>
+                <li>Extended Day Program (6 hours daily)</li>
+                <li>Half-day Program (3 hours daily)</li>
+            </ul>
+            <p>This breakdown allows families to select the program and attendance structure that best suits their needs.</p>
+
+            <!-- Subsections updated to remove costs -->
+            <h5>2.2.1 Admission Fee</h5>
+            <p>The Admission Fee is a one-time charge payable upon enrollment. This fee secures the student’s place and covers administrative costs, including registration, processing, and initial access to institute resources. The Admission Fee is non-refundable.</p>
+            
+            <h5>2.2.2 Tuition Fee</h5>
+            <p>The Tuition Fee covers the core instructional costs associated with the student’s program. This includes access to subject-specific instruction, personalized mentorship, academic guidance, and assessments. Tuition fees vary depending on the program and attendance duration:</p>
+            <ul>
+                <li>Full-time Boarding (8 hours)</li>
+                <li>Extended Day Program (6 hours)</li>
+                <li>Half-day Program (3 hours)</li>
+            </ul>
+
+            <h5>2.2.3 Book Fee</h5>
+            <p>A one-time Book Fee covers all essential textbooks, workbooks, and supplementary study materials required for the academic year. This fee ensures that students have access to current, high-quality materials from the start of their program.</p>
+
+            <h5>2.2.4 Infrastructure Fee</h5>
+            <p>The Infrastructure Fee contributes to the maintenance and enhancement of the institute’s facilities. This includes classroom resources, amenities, and overall campus upkeep to provide a comfortable and conducive learning environment for all students.</p>
+
+            <h5>2.2.5 Uniform Fee</h5>
+            <p>The Uniform Fee includes essential uniform items, such as a branded T-shirt and additional components. A standard uniform promotes discipline and fosters a sense of unity among students, reinforcing the values of respect and equality within the institute.</p>
+
+            <h5>2.2.6 Examination Fee</h5>
+            <p>The Examination Fee includes weekly assessments conducted every Sunday, with additional exams held intermittently. Each Sunday exam costs a nominal amount, and an additional percentage of this cost is added to cover extra assessments, ensuring continuous evaluation and progress monitoring.</p>
+
+            <h5>2.2.7 Technology Fee</h5>
+            <p>A Technology Fee provides students access to digital learning tools, online study materials, and technology support services. This fee supports blended learning and modern educational resources that enhance exam preparation and academic success.</p>
+
+            <h4>2.3 Refund and Cancellation Policies</h4>
+            <p>To ensure transparency, The Prime Classes has established a structured refund and cancellation policy, allowing families to make informed decisions.</p>
+            
+            <h5>2.3.1 Refund Conditions</h5>
+            <ul>
+                <li><strong>7-day Refund Period :</strong> Parents have a 7-day period after enrollment to request a refund if they are not fully satisfied. This period allows families time to experience the program before making a final commitment.</li>
+                <li><strong>After 7 Days :</strong> Beyond the 7-day period, all fees become non-refundable. Students who continue after this time are considered fully enrolled, and no refunds will be processed.</li>
+            </ul>
+
+            <h5>2.3.2 Non-refundable Fees</h5>
+            <ul>
+                <li>Certain fees, such as the Admission Fee and initial administrative charges, are non-refundable to cover the essential costs incurred during the enrollment process.</li>
+            </ul>
+
+            <h4>2.4 Payment Terms and Schedule</h4>
+            <p>The Prime Classes offers flexible payment options to accommodate families’ financial planning.</p>
+            
+            <h5>2.4.1 Payment Methods</h5>
+            <ul>
+                <li>Accepted payment methods include cash, debit/credit card, UPI, and bank transfers. All payments are documented, and official receipts are issued to ensure financial transparency and record-keeping.</li>
+            </ul>
+
+            <h5>2.4.2 Installment Options</h5>
+            <ul>
+                <li>For added convenience, parents can opt to pay fees in installments. It is recommended that a majority portion of the total fee be paid within the first three months, with the remaining balance settled within six months of admission. Timely payments ensure that students have uninterrupted access to academic resources.</li>
+            </ul>
+
+            <h5>2.4.3 Penalty for Late Payments</h5>
+            <ul>
+                <li>A late fee will apply for any delayed payments. Parents will be notified of outstanding balances, and repeated delays may result in restricted class access until payments are completed. To avoid any disruptions, families are encouraged to maintain the payment schedule.</li>
+            </ul>
+            
+            <h3>3. Batch Assignment and Transfer Policy</h3>
+            <p><strong>Introduction</strong> The Prime Classes has a systematic approach to batch assignment and transfer to create a conducive learning environment for every student. With a structured system that divides students into batches based on age, academic level, and goals, The Prime Classes aims to place each student in a batch that best supports their educational journey. We have batches designed for foundational studies (Pre-Foundation and Foundation), junior-level students (TPC01 to TPC08), senior-level students preparing for 9th-grade entrance exams (TPC09, TPC10, TPC11), and specialized preparation for Rashtriya Indian Military College (RIMC1 and RIMC2). Each batch is tailored with specific schedules, including morning, full-day, and evening sessions to maximize flexibility and accommodate diverse student needs.</p>
+            <p>The following sections provide a detailed explanation of how initial batch assignment and transfer processes are conducted, ensuring transparency and fairness in creating a supportive academic environment.</p>
+
+            <h4>3.1 Initial Batch Assignment</h4>
+            <h5>3.1.1 Criteria for Batch Placement</h5>
+            <p>Batch assignment is carefully decided based on various factors, which help in categorizing students into the most appropriate group.</p>
+            
+            <h5>3.1.2 Notification of Batch Assignment</h5>
+            <p>Once the batch is assigned, notifications are sent to parents and students via WhatsApp and are also available on the academy’s app. This ensures transparency, allowing families to understand the batch placement, session times, and other details, enabling a smooth start to the student’s learning journey.</p>
+            
+            <h4>3.2 Transfer Between Batches</h4>
+            <p>The transfer policy allows flexibility in moving students between batches if a different batch would better suit their academic needs, learning pace, or schedule.</p>
+            
+            <h5>3.2.1 Eligibility for Transfer</h5>
+            <p>Transfer eligibility is based on several factors:</p>
+            <ul>
+                <li><strong>Academic Progress :</strong> If a student demonstrates significant improvement, showing readiness for more advanced material, they may be eligible for transfer to a higher batch. Conversely, students needing extra support might be placed in a batch with more focus on foundational skills.</li>
+                <li><strong>Suitability of Schedule :</strong> Students with changing availability (morning, full-day, or evening sessions) can request transfers to batches with more suitable timing. This ensures they can balance academic commitments with personal responsibilities.</li>
+                <li><strong>Learning Pace and Intelligence Level :</strong> Regular assessments provide insights into a student's learning pace. Transfers may be recommended if a different batch better aligns with the student's needs, allowing them to benefit from an environment that matches their academic capacity.</li>
+            </ul>
+            
+            <h5>3.2.2 Transfer Application Process</h5>
+            <p>The process for requesting a transfer is straightforward, ensuring parents and students can access the option easily.</p>
+            
+            <h5>3.2.3 Conditions for Approval</h5>
+            <p>The conditions for transfer approval include:</p>
+            <ul>
+                <li><strong>Suitability for the New Batch :</strong> A transfer is approved if the new batch environment aligns with the student’s goals, learning pace, and progress.</li>
+                <li><strong>Weekly or Monthly Test Performance :</strong> Performance in assessments helps indicate readiness.</li>
+                <li><strong>Behavioral and Attendance Record :</strong> Consistent attendance and positive behavior are considered.</li>
+            </ul>
+            <p><strong>Final Transfer Decision</strong> The transfer decision is a collaborative effort between the batch head and academic head, considering the student’s strengths, performance, and academic needs.</p>
+
+            <h3>4. Roles and Responsibilities</h3>
+            <p><strong>Introduction</strong> At The Prime Classes, we believe in nurturing a disciplined, respectful, and focused learning environment that goes beyond academics. Our goal is to shape students into confident, resilient leaders with a strong sense of integrity and commitment. This document details the responsibilities of each party involved, outlining expectations and guidelines to help create an optimal environment for growth.</p>
+
+            <h4>4.1 Institute’s Responsibilities</h4>
+            <h5>4.1.1 Commitment to Quality Education</h5>
+            <ul>
+                <li><strong>Excellence in Teaching :</strong> We are-committed to delivering the best possible education by using engaging, student-centered teaching methods.</li>
+                <li><strong>Leadership and Ethical Development :</strong> In addition to academics, our goal is to instill qualities like integrity, discipline, and responsibility.</li>
+                <li><strong>Creating a Supportive Environment :</strong> The institute is committed to providing a safe and nurturing environment where students feel encouraged to grow.</li>
+            </ul>
+            
+            <h5>4.1.2 Communication with Parents</h5>
+            <ul>
+                <li><strong>Regular Progress Updates :</strong> Parents are regularly updated on their child’s progress through various channels.</li>
+                <li><strong>Dedicated Contact Lines :</strong> We provide dedicated contact numbers for different types of concerns.</li>
+                <li><strong>Proactive Engagement :</strong> Beyond reporting academic performance, we inform parents about behavioral observations, homework completion, and attendance.</li>
+            </ul>
+            
+            <h5>4.1.3 Monitoring Student Progress</h5>
+            <ul>
+                <li><strong>Weekly Homework and Behavior Reports :</strong> The institute systematically tracks each student’s homework submissions, attendance, and behavior.</li>
+                <li><strong>Monthly Student Assessments :</strong> To evaluate each student’s overall development, we conduct monthly assessments.</li>
+                <li><strong>Hierarchical Monitoring System :</strong> Student monitoring is structured through a multi-level hierarchy (Batch Head, HOD, Academic Head, Top-Level Management).</li>
+            </ul>
+
+            <h4>4.2 Parental Responsibilities</h4>
+            <h5>4.2.1 Ensuring Regular Attendance</h5>
+            <ul>
+                <li><strong>Consistency in Attendance :</strong> Parents are expected to ensure that their child attends classes regularly.</li>
+                <li><strong>Prior Notice for Planned Absences :</strong> Parents should notify the institute at least one day in advance with a formal application.</li>
+            </ul>
+            
+            <h5>4.2.2 Homework Support and Engagement</h5>
+            <ul>
+                <li><strong>Establishing a Study Environment :</strong> Parents should provide a dedicated study space at home.</li>
+                <li><strong>Daily Homework Monitoring :</strong> Parents are responsible for checking that their child completes homework regularly.</li>
+                <li><strong>Health Notifications :</strong> If a student cannot complete homework due to health reasons, parents should notify the institute.</li>
+            </ul>
+            
+            <h5>4.2.3 Adherence to Payment Schedules</h5>
+            <ul>
+                <li><strong>Timely Fee Payments :</strong> Following the set fee schedules is essential for uninterrupted educational services.</li>
+                <li><strong>Uniform and Material Maintenance :</strong> Parents should ensure their child’s uniform is clean, neat, and well-maintained.</li>
+            </ul>
+
+            <h4>4.3 Student Code of Conduct and Ethics</h4>
+            <p>The Prime Classes has established a comprehensive code of conduct that each student must follow.</p>
+            <h5>4.3.1 Expected Behavior and Discipline</h5>
+            <p>Rules regarding Classroom Silence, Dress Code, Cleanliness, Entry/Exit Etiquette, Question Etiquette, Respect for Teachers, Exam Discipline, Timely Arrival, and Required Materials are enforced with penalties.</p>
+            
+            <h5>4.3.2 Respect for Institute Rules</h5>
+            <p>Rules regarding Timely Arrival, Personal Grooming, Property Handling, No Valuables, Absence Notification, App Usage, Behavior in Teacher’s Absence, Respectful Communication, and No Bullying are enforced with penalties.</p>
+            <p><strong>Consequences for Non-Compliance</strong></p>
+            <p>Verbal Warnings, Detention, Parental Notification, Fines for Damage, and Suspension may be used.</p>
+
+            <h3>5. Academic Policies</h3>
+            <p><strong>Introduction</strong> The Prime Classes offers a comprehensive preparation program for students aiming to gain admission to prestigious institutions.</p>
+            
+            <h4>5.1 Curriculum Overview</h4>
+            <p>Our curriculum structure aligns with the specific requirements of each exam.</p>
+            <h5>5.1.1 Pre-Foundation (Classes 3-4)</h5>
+            <p>Focuses on basic arithmetic, language, and general knowledge.</p>
+            <h5>5.1.2 Foundation (Classes 4-5)</h5>
+            <p>Strengthens basics in math, language, and GK.</p>
+            <h5>5.1.3 Junior (Classes 5-6)</h5>
+            <p>Prepares students for Class 6 entrance exams (RMS, Sainik) with subjects including Intelligence (Reasoning).</p>
+            <h5>5.1.4 Senior (Classes 8-9)</h5>
+            <p>Targets Class 9 entrance exams with in-depth curriculum including Science and Social Science.</p>
+            <h5>5.1.5 RIMC (Classes 7-8)</h5>
+            <p>Specially designed for RIMC entrance exam, including a Viva Voce (interview) component.</p>
+            
+            <h4>5.2 Homework and Assignment Guidelines</h4>
+            <h5>5.2.1 Homework Submission</h5>
+            <p>Daily submission and review.</p>
+            <h5>5.2.2 Assignment Deadlines</h5>
+            <p>Strict deadlines with consequences for late submission.</p>
+            
+            <h4>5.3 Attendance and Absence Policies</h4>
+            <h5>5.3.1 Minimum Attendance Requirements</h5>
+            <p>A minimum monthly attendance is required. Students must adhere to batch timings.</p>
+            <h5>5.3.2 Absence Notification Procedures</h5>
+            <p>Procedures for planned leave, emergency leave, and unauthorized absence.</p>
+            
+            <h4>5.4 Assessment, Examinations, and Reporting</h4>
+            <h5>5.4.1 Types of Assessments</h5>
+            <p>Weekly Tests, Monthly Exams, and Special Preparatory Exams.</p>
+            <h5>5.4.2 Examination Schedules</h5>
+            <p>Tests are held regularly, increasing in intensity from October to December.</p>
+            <h5>5.4.3 Progress Report Frequency</h5>
+            <p>Weekly updates via WhatsApp, Monthly reports, and Intensive reporting during exam season.</p>
+
+            <h3>6. Health, Safety, and Emergency Protocols</h3>
+            <p><strong>Introduction</strong> At The Prime Classes, ensuring the health, safety, and well-being of every student is a top priority.</p>
+            
+            <h4>6.1 Health Requirements and Medical Consent</h4>
+            <h5>6.1.1 Student Health Documentation</h5>
+            <p>Medical History Form, Vaccination Record, and Consent to Treat Form are required. A liability waiver for pre-existing conditions must be signed.</p>
+            <h5>6.1.2 Emergency Contact Information</h5>
+            <p>Parents must provide two emergency contacts.</p>
+            
+            <h4>6.2 General Health Safety Guidelines</h4>
+            <h5>6.2.1 Hygiene Practices</h5>
+            <p>Daily hygiene standards and classroom cleanliness are enforced.</p>
+            <h5>6.2.2 Protocols for SymptomaticStudents</h5>
+            <p>Symptomatic students will be isolated and parents notified. Parents must keep sick children at home.</p>
+            
+            <h4>6.3 Emergency Procedures and First Aid Policies</h4>
+            <h5>6.3.1 Emergency Response Actions</h5>
+            <p>Protocol involves stabilizing the student, notifying contacts, and transport to hospital if needed. Parents are responsible for medical expenses.</p>
+            <h5>6.3.2 First Aid Availability</h5>
+            <p>Basic first aid is available on-site for minor injuries. Severe cases are referred to a hospital.</p>
+            
+            <h4>6.4 Liability Waiver and Acknowledgment</h4>
+            <p>Parents must sign a liability waiver acknowledging their responsibility for pre-existing conditions and emergency medical expenses.</p>
+
+            <h3>7. Transportation and Uniform Policies</h3>
+            <p><strong>Introduction</strong> The Prime Classes is committed to ensuring safe, reliable transportation and a consistent, professional appearance through a well-defined uniform policy.</p>
+            
+            <h4>7.1 Transportation Services and Fees</h4>
+            <h5>7.1.1 Transport Options</h5>
+            <p>Vans and Auto-Rickshaws are available through third-party providers. Fees are distance-based and separate from tuition.</p>
+            <h5>7.1.2 Transport Conduct Rules</h5>
+            <p>Punctuality for pick-up is required. Emergency contacts for transport are provided.</p>
+            
+            <h4>7.2 Student Conduct in Transport Vehicles</h4>
+            <h5>7.2.1 Expected Behavior</h5>
+            <p>Respect for the driver, care for the vehicle, and safe conduct are required.</p>
+            <h5>7.2.2 Consequences for Misconduct</h5>
+            <p>Verbal warnings, parental notification, repair costs for damages, and suspension of transport privileges.</p>
+            
+            <h4>7.3 Uniform Requirements and Dress Code</h4>
+            <h5>7.3.1 Required Uniform Items</h5>
+            <p>A designated T-shirt, full-length pants, and closed-toe shoes are required. Seasonal items are specified for winter.</p>
+            <h5>7.3.2 Purchasing Guidelines</h5>
+            <p>All items must be purchased from authorized suppliers.</p>
+            
+            <h4>7.4 Penalties for Non-Compliance with Dress Code</h4>
+            <h5>7.4.1 Dress Code Violations</h5>
+            <p>Incomplete/incorrect uniform or improper footwear.</p>
+            <h5>7.4.2 Disciplinary Actions</h5>
+            <p>Progressive discipline from a warning to being sent home or formal notice.</p>
+
+            <h3>8. Discipline and Conduct Management</h3>
+            <p><strong>Introduction</strong> The Prime Classes is dedicated to creating a positive and structured environment where discipline, mutual respect, and accountability are fundamental principles.</p>
+            
+            <h4>8.1 Expected Student Behavior</h4>
+            <h5>8.1.1 Respect Towards Staff and Peers</h5>
+            <p>Polite communication, listening to instructions, and zero tolerance for bullying.</p>
+            <h5>8.1.2 Adherence to Institute Rules</h5>
+            <p>Punctuality, compliance with dress code, and active participation.</p>
+            
+            <h4>8.2 Disciplinary Actions for Misconduct</h4>
+            <h5>8.2.1 Minor Infractions and Warnings</h5>
+            <p>Verbal warnings, written notices, or behavioral adjustment activities.</p>
+            <h5>8.2.2 Major Violations and Suspension</h5>
+            <p>Parent-teacher meeting, suspension, or a behavioral contract.</p>
+            
+            <h4>8.3 Property Care and Damage Liability</h4>
+            <h5>8.3.1 Responsibility for Institute Property</h5>
+            <p>Students must maintain cleanliness and report any accidental damage.</p>
+            <h5>8.3.2 Liability for Damages</h5>
+            <p>Parents will be held responsible for repair/replacement costs for intentional damage.</p>
+            
+            <h4>8.4 Actions for Non-compliance in Homework or Attendance</h4>
+            <h5>8.4.1 Homework Non-submission</h5>
+            <p>Parental notification and extra assignments. Parental responsibility is emphasized.</p>
+            <h5>8.4.2 Attendance Non-compliance</h5>
+            <p>Attendance is monitored, and parents are notified of unexcused absences. Parental role is critical.</p>
+            <p><strong>Parental Responsibility in Dietary and Homework Matters</strong></p>
+            <p>Parents are responsible for their child's dietary supervision and for ensuring homework is completed at home.</p>
+
+            <h3>9. Fee Compliance and Financial Policies</h3>
+            <p><strong>Introduction</strong> The Prime Classes has structured financial policies to ensure transparency and consistency in payment procedures.</p>
+            
+            <h4>9.1 Payment Schedules and Deadlines</h4>
+            <h5>9.1.1 Scheduled Payment Dates</h5>
+            <p>Installment plans are provided for full-day and half-day programs. A separate annual registration fee is also due.</p>
+            <h5>9.1.2 Payment Reminder Notifications</h5>
+            <p>Reminders are sent via SMS or email. An online portal is available for payments.</p>
+            
+            <h4>9.2 Penalties for Non-payment and Outstanding Dues</h4>
+            <h5>9.2.1 Late Payment Penalties</h5>
+            <p>A late fee will be added after a 3-day grace period, with an additional weekly penalty, up to a cap.</p>
+            <h5>9.2.2 Suspension Due to Non-payment</h5>
+            <p>Suspension from class may occur if dues are not paid within 90 days. A re-enrollment fee may be required.</p>
+            
+            <h4>9.3 Additional Fees: Exam and Transportation</h4>
+            <p>Exam fees and transportation fees are separate from tuition and are optional.</p>
+            
+            <h4>9.4 Report Card and Certificate Hold Policies for Unpaid Fees</h4>
+            <h5>9.4.1 Hold on Records for Non-payment</h5>
+            <p>Progress reports and certificates will be withheld if fees are outstanding.</p>
+            <h5>9.4.2 Release Upon Full Payment</h5>
+            <p>Records are released immediately upon full payment. All dues must be settled for re-enrollment.</p>
+
+            <h3>10. Parent Communication and Engagement</h3>
+            <p><strong>Introduction</strong> At The Prime Classes, strong parent engagement and transparent communication are essential to student success.</p>
+            
+            <h4>10.1 Communication Channels</h4>
+            <h5>10.1.1 Through WhatsApp/Telephonic/Email Communication</h5>
+            <p>Regular updates are provided via WhatsApp, phone, and email.</p>
+            <h5>1.1.2 App Access</h5>
+            <p>The official app provides access to updates, attendance, homework, and performance tracking.</p>
+            
+            <h4>10.2 Parent-Teacher Conferences and Meetings</h4>
+            <h5>10.2.1 Scheduled Meetings</h5>
+            <p>Biannual parent-teacher conferences are held.</p>
+            <h5>10.2.2 Individual Progress Discussions</h5>
+            <p>Monthly check-ins or individual meetings can be requested.</p>
+            
+            <h4>10.3 Feedback and Grievance Resolution Procedures</h4>
+            <h5>10.3.1 Feedback Submission</h5>
+            <p>Feedback forms are available via the app or office.</p>
+            <h5>10.3.2 Grievance Resolution Process</h5>
+            <p>A structured process with complaint tracking, a 1-3 day resolution timeline, and an escalation option.</p>
+
+            <h3>11. Additional Policies and Permissions</h3>
+            <p><strong>Introduction</strong> The Prime Classes is committed to maintaining a professional, respectful, and legally compliant environment.</p>
+            
+            <h4>11.1 Media and Photography Consent</h4>
+            <h5>11.1.1 Usage of Student Images</h5>
+            <p>The institute reserves the right to use student images and results for promotional use. Parents agree not to share results with other institutes.</p>
+            <h5>11.1.2 Opt-out Options</h5>
+            <p>A written opt-out request can be submitted. Parents also agree not to make defamatory comments.</p>
+            
+            <h4>11.2 Field Trip and External Activity Permissions</h4>
+            <h5>11.2.1 Consent Requirements</h5>
+            <p>Written consent is required for each trip.</p>
+            <h5>11.2.2 Safety and Supervision Protocols</h5>
+            <p>Adequate supervision and safety measures are maintained.</p>
+            
+            <h4>11.3 Technology Use and Digital Conduct</h4>
+            <h5>11.3.1 Acceptable Use Policy</h5>
+            <p>Technology is for educational purposes only. Institute materials are intellectual property and cannot be shared or sold.</p>
+            <h5>11.3.2 Digital Etiquette and Safety</h5>
+            <p>Respectful online behavior is expected. Prohibited distribution of content will result in legal action.</p>
+            
+            <h4>11.4 Confidentiality and Data Protection</h4>
+            <h5>11.4.1 Data Privacy Measures</h5>
+            <p>Student records are stored securely and not shared without consent.</p>
+            <h5>11.4.2 Access to Student Records</h5>
+            <p>Parents can request access to records. Data is retained and disposed of securely. Parents agree not to defame the institute with data.</p>
+            
+          </div>
+          
+          <!-- "I Agree" Checkbox -->
+          <div class="form-group full-width terms-agree-group">
+            <input type="checkbox" id="termsAgree" required>
+            <label for="termsAgree">I have read and agree to the Terms and Conditions.</label>
+          </div>
+        </section>
+        <!-- === END OF TERMS SECTION === -->
+
+
+          <div class="action-row">
+            <button type="submit" id="submitBtn">Submit Application</button>
+            <button type="button" id="downloadPdfBtn" class="hidden">Download PDF</button>
+          </div>
+          <div id="status" aria-live="polite"></div>
+        </form>
+      </div>
+    </div>
+
+    <div id="enquiryModal" class="enquiry-modal-overlay" aria-hidden="true">
+      <div class="enquiry-modal" role="dialog" aria-modal="true" aria-labelledby="enquiryModalTitle">
+        <div class="enquiry-modal-header">
+          <div>
+            <p class="form-kicker">Enquiry Lookup</p>
+            <h3 id="enquiryModalTitle" class="enquiry-modal-title">Fetch from Enquiry</h3>
+            <p class="enquiry-modal-subtitle">Search by student name, father name, mobile number, or email to import enquiry details into the admission form.</p>
+          </div>
+          <button type="button" id="closeEnquiryModalBtn" class="enquiry-modal-close" aria-label="Close enquiry modal">&times;</button>
+        </div>
+        <div class="enquiry-modal-search">
+          <input type="text" id="enquirySearchInput" placeholder="Search by student name, father name, mobile number, or email" autocomplete="off">
+        </div>
+        <div class="enquiry-modal-content">
+          <div id="enquiryLoadingState" class="enquiry-loading hidden">Loading enquiry data...</div>
+          <div id="enquiryEmptyState" class="enquiry-empty hidden">No enquiry records found.</div>
+          <div id="enquiryResultMeta" class="enquiry-result-meta hidden"></div>
+          <div id="enquiryTableShell" class="enquiry-table-shell hidden">
+            <table class="enquiry-table">
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Father</th>
+                  <th>Contact</th>
+                  <th>Class</th>
+                  <th>Category</th>
+                  <th>School</th>
+                  <th>Scholarship</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="enquiryTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="toastStack" class="toast-stack" aria-live="polite" aria-atomic="true"></div>
+
+    <script>
+      // === GLOBAL VARIABLES ===
+      let feeTypesData = [];
+      let academicProgramsData = [];
+      let enquiryDataCache = [];
+      let filteredEnquiryData = [];
+      let enquiryDataLoaded = false;
+      let enquiryDataLoading = false;
+      let enquirySearchTimer = null;
+      let isSubmitting = false;
+      const MAX_ENQUIRY_RENDER_ROWS = 140;
+      
+      // === LOAD DYNAMIC DATA ON PAGE LOAD ===
+      window.addEventListener('DOMContentLoaded', (event) => {
+        setApplicationDate();
+        loadAcademicPrograms();
+        loadFeeTypes();
+        initializeEnquiryModal();
+        initializeEmailValidation();
+      });
+      
+      // === LOAD ACADEMIC PROGRAMS FROM SPREADSHEET ===
+      async function loadAcademicPrograms() {
+        console.log('loadAcademicPrograms: Starting...');
+        const programSelect = document.getElementById('program');
+        try {
+          const res = await fetch('/api/public/programs');
+          const parsedResponse = await res.json();
+          programSelect.innerHTML = '<option value="" disabled selected>Select program...</option>';
+          if (parsedResponse && parsedResponse.success && Array.isArray(parsedResponse.data)) {
+            academicProgramsData = parsedResponse.data;
+            parsedResponse.data.forEach(program => {
+              const progName = typeof program === 'string' ? program : (program.program_name || program.name);
+              const option = document.createElement('option');
+              option.value = progName;
+              option.textContent = progName;
+              programSelect.appendChild(option);
+            });
+            console.log('loadAcademicPrograms: Loaded', parsedResponse.data.length, 'programs');
+          }
+        } catch (error) {
+          console.error('Failed to load academic programs:', error);
+          programSelect.innerHTML = '<option value="" disabled selected>Error loading programs</option>';
+        }
+      }
+      
+      // === LOAD FEE TYPES FROM SPREADSHEET ===
+      async function loadFeeTypes() {
+        console.log('loadFeeTypes: Starting...');
+        try {
+          const res = await fetch('/api/public/fee-types');
+          const parsedResponse = await res.json();
+          if (parsedResponse && parsedResponse.success && Array.isArray(parsedResponse.data)) {
+            feeTypesData = parsedResponse.data;
+            console.log('loadFeeTypes: Loaded fee types data:', feeTypesData);
+          }
+        } catch (error) {
+          console.error('Failed to load fee types:', error);
+        }
+      }
+      
+      // === SET APPLICATION DATE ON LOAD (Section 1) ===
+      function setApplicationDate() {
+        const dateInput = document.getElementById('applicationDate');
+        if(dateInput) {
+          // Get today's date in YYYY-MM-DD format
+          const today = new Date();
+          const yyyy = today.getFullYear();
+          const mm = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-11
+          const dd = String(today.getDate()).padStart(2, '0');
+          dateInput.value = `${yyyy}-${mm}-${dd}`;
+        }
+      }
+
+      function initializeEmailValidation() {
+        const emailInput = document.getElementById('email');
+        if (!emailInput) {
+          return;
+        }
+
+        emailInput.addEventListener('input', validateParentEmail);
+        emailInput.addEventListener('blur', validateParentEmail);
+      }
+
+      function validateParentEmail() {
+        const emailInput = document.getElementById('email');
+        if (!emailInput) {
+          return true;
+        }
+
+        const emailValue = emailInput.value.trim();
+        if (!emailValue) {
+          emailInput.setCustomValidity('');
+          return true;
+        }
+
+        const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailValue);
+        emailInput.setCustomValidity(validEmail ? '' : 'Please enter a valid Parent Email Address.');
+        return validEmail;
+      }
+
+      function initializeEnquiryModal() {
+        const fetchBtn = document.getElementById('fetchEnquiryBtn');
+        const closeBtn = document.getElementById('closeEnquiryModalBtn');
+        const modal = document.getElementById('enquiryModal');
+        const searchInput = document.getElementById('enquirySearchInput');
+        const tableBody = document.getElementById('enquiryTableBody');
+
+        fetchBtn.addEventListener('click', openEnquiryModal);
+        closeBtn.addEventListener('click', closeEnquiryModal);
+        searchInput.addEventListener('input', function() {
+          const searchValue = this.value;
+          window.clearTimeout(enquirySearchTimer);
+          enquirySearchTimer = window.setTimeout(function() {
+            filterEnquiryData(searchValue);
+          }, 80);
+        });
+        tableBody.addEventListener('click', handleEnquiryTableClick);
+        modal.addEventListener('click', function(event) {
+          if (event.target === modal) {
+            closeEnquiryModal();
+          }
+        });
+        document.addEventListener('keydown', function(event) {
+          if (event.key === 'Escape' && modal.classList.contains('is-open')) {
+            closeEnquiryModal();
+          }
+        });
+      }
+
+      function openEnquiryModal() {
+        const modal = document.getElementById('enquiryModal');
+        const searchInput = document.getElementById('enquirySearchInput');
+
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+        window.setTimeout(() => searchInput.focus(), 80);
+
+        if (enquiryDataLoaded) {
+          filterEnquiryData(searchInput.value);
+          return;
+        }
+
+        loadEnquiryData();
+      }
+
+      function closeEnquiryModal() {
+        const modal = document.getElementById('enquiryModal');
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('modal-open');
+      }
+
+      async function loadEnquiryData() {
+        if (enquiryDataLoading || enquiryDataLoaded) {
+          return;
+        }
+
+        enquiryDataLoading = true;
+        toggleEnquiryLoading(true, 'Loading enquiry data...');
+
+        try {
+          const res = await fetch('/api/public/enquiries');
+          const parsed = await res.json();
+          let records = (parsed && parsed.success && Array.isArray(parsed.data)) ? parsed.data : (Array.isArray(parsed) ? parsed : []);
+
+          enquiryDataCache = Array.isArray(records) ? records.map(function(record) {
+            const normalizedRecord = {
+              studentName: getSafeEnquiryValue(record.studentName || record['Student Name']),
+              className: getSafeEnquiryValue(record.className || record.studentClass || record['Class']),
+              fatherName: getSafeEnquiryValue(record.fatherName || record["Father's Name"] || record['Father Name']),
+              motherName: getSafeEnquiryValue(record.motherName || record["Mother's Name"] || record['Mother Name']),
+              fatherNo: getSafeEnquiryValue(record.fatherNo || record['Father No.'] || record['Mobile Numbers']),
+              motherNo: getSafeEnquiryValue(record.motherNo || record['Mother No.']),
+              parentEmail: getSafeEnquiryValue(record.parentEmail || record.email || record['Parent Email']),
+              category: getSafeEnquiryValue(record.category || record['Category'] || record['Caste']),
+              occupation: getSafeEnquiryValue(record.occupation || record['Father Occupation']),
+              school: getSafeEnquiryValue(record.school || record['Present School']),
+              dob: getSafeEnquiryValue(record.dob || record['DOB'] || record['Date of Birth']),
+              completeAddress: getSafeEnquiryValue(record.completeAddress || record['Complete Address']),
+              discountScholarship: getSafeEnquiryValue(record.discountScholarship || record.discount || record['Discount (Scholarship)'])
+            };
+            normalizedRecord.searchIndex = normalizeSearchText([
+              normalizedRecord.studentName,
+              normalizedRecord.fatherName,
+              normalizedRecord.fatherNo,
+              normalizedRecord.motherNo,
+              normalizedRecord.parentEmail
+            ].join(' '));
+            return normalizedRecord;
+          }).filter(function(record) {
+            return record.studentName || record.fatherName || record.fatherNo || record.motherNo || record.parentEmail;
+          }) : [];
+
+          enquiryDataLoaded = true;
+          enquiryDataLoading = false;
+          toggleEnquiryLoading(false);
+          const searchVal = document.getElementById('enquirySearchInput') ? document.getElementById('enquirySearchInput').value : '';
+          filterEnquiryData(searchVal);
+        } catch (error) {
+          enquiryDataLoading = false;
+          enquiryDataLoaded = false;
+          toggleEnquiryLoading(false);
+          showEnquiryMessage(error && error.message ? `Unable to load enquiry data: ${error.message}` : 'Unable to load enquiry data.');
+        }
+      }
+
+      function toggleEnquiryLoading(isLoading, message) {
+        const loadingState = document.getElementById('enquiryLoadingState');
+        const emptyState = document.getElementById('enquiryEmptyState');
+        const tableShell = document.getElementById('enquiryTableShell');
+        const tableBody = document.getElementById('enquiryTableBody');
+        const searchInput = document.getElementById('enquirySearchInput');
+        const resultMeta = document.getElementById('enquiryResultMeta');
+
+        loadingState.innerHTML = `<span class="enquiry-spinner" aria-hidden="true"></span>${escapeHtml(message || 'Loading enquiry data...')}`;
+        loadingState.classList.toggle('hidden', !isLoading);
+        emptyState.classList.add('hidden');
+        resultMeta.classList.add('hidden');
+        tableShell.classList.toggle('hidden', isLoading);
+        searchInput.disabled = isLoading;
+
+        if (isLoading) {
+          tableBody.innerHTML = '';
+        }
+      }
+
+      function showEnquiryMessage(message) {
+        const loadingState = document.getElementById('enquiryLoadingState');
+        const emptyState = document.getElementById('enquiryEmptyState');
+        const tableShell = document.getElementById('enquiryTableShell');
+        const searchInput = document.getElementById('enquirySearchInput');
+        const resultMeta = document.getElementById('enquiryResultMeta');
+
+        loadingState.classList.add('hidden');
+        tableShell.classList.add('hidden');
+        resultMeta.classList.add('hidden');
+        emptyState.textContent = message;
+        emptyState.classList.remove('hidden');
+        searchInput.disabled = false;
+      }
+
+      function filterEnquiryData(searchTerm) {
+        const normalizedQuery = normalizeSearchText(searchTerm);
+        const queryTerms = normalizedQuery.split(' ').filter(Boolean);
+
+        filteredEnquiryData = !queryTerms.length
+          ? enquiryDataCache.slice()
+          : enquiryDataCache.filter(function(record) {
+              const searchIndex = record.searchIndex || normalizeSearchText([
+                record.studentName,
+                record.fatherName,
+                record.fatherNo,
+                record.motherNo,
+                record.parentEmail
+              ].join(' '));
+              return queryTerms.every(function(term) {
+                return searchIndex.includes(term);
+              });
+            });
+
+        renderEnquiryTable(filteredEnquiryData, normalizedQuery);
+      }
+
+      function renderEnquiryTable(records, normalizedQuery) {
+        const tableBody = document.getElementById('enquiryTableBody');
+        const tableShell = document.getElementById('enquiryTableShell');
+        const resultMeta = document.getElementById('enquiryResultMeta');
+
+        toggleEnquiryLoading(false);
+
+        if (!records.length) {
+          tableBody.innerHTML = '';
+          showEnquiryMessage(normalizedQuery ? 'No matching enquiry records found.' : 'No enquiry records found.');
+          return;
+        }
+
+        document.getElementById('enquiryEmptyState').classList.add('hidden');
+        tableShell.classList.remove('hidden');
+        resultMeta.classList.remove('hidden');
+        resultMeta.textContent = records.length > MAX_ENQUIRY_RENDER_ROWS
+          ? `Showing first ${MAX_ENQUIRY_RENDER_ROWS} of ${records.length} matches. Keep typing to narrow the list.`
+          : `${records.length} enquiry record${records.length === 1 ? '' : 's'} ready.`;
+
+        tableBody.innerHTML = records.slice(0, MAX_ENQUIRY_RENDER_ROWS).map(function(record, index) {
+          const mobileParts = [record.fatherNo, record.motherNo].filter(Boolean);
+          return `
+            <tr>
+              <td>
+                <strong>${escapeHtml(record.studentName || '-')}</strong>
+                <div class="enquiry-meta">${escapeHtml(record.dob ? 'DOB: ' + record.dob : 'DOB not available')}</div>
+              </td>
+              <td>
+                ${escapeHtml(record.fatherName || '-')}
+                <div class="enquiry-meta">${escapeHtml(record.motherName || 'Mother name not available')}</div>
+              </td>
+              <td>
+                ${escapeHtml(mobileParts.join(' / ') || '-')}
+                <div class="enquiry-meta">${escapeHtml(record.parentEmail || 'Email not available')}</div>
+              </td>
+              <td>${escapeHtml(record.className || '-')}</td>
+              <td>${escapeHtml(record.category || '-')}</td>
+              <td>${escapeHtml(record.school || '-')}</td>
+              <td>${escapeHtml(record.discountScholarship || '-')}</td>
+              <td><button type="button" class="enquiry-fetch-btn" data-enquiry-index="${index}">Fetch</button></td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      function handleEnquiryTableClick(event) {
+        const fetchButton = event.target.closest('.enquiry-fetch-btn');
+        if (!fetchButton) {
+          return;
+        }
+
+        const recordIndex = Number(fetchButton.getAttribute('data-enquiry-index'));
+        const record = filteredEnquiryData[recordIndex];
+
+        if (!record) {
+          return;
+        }
+
+        applyEnquiryData(record, fetchButton);
+      }
+
+      function applyEnquiryData(record, fetchButton) {
+        const hasExistingData = hasExistingMappedData(record);
+
+        if (hasExistingData) {
+          const shouldReplace = window.confirm('Some mapped fields already contain data. Do you want to replace them with enquiry details?');
+          if (!shouldReplace) {
+            return;
+          }
+        }
+
+        setEnquiryImportState(fetchButton, true);
+        window.setTimeout(function() {
+          setFieldValue('studentName', record.studentName);
+          setFieldValue('fatherName', record.fatherName);
+          setFieldValue('motherName', record.motherName);
+          setFieldValue('email', record.parentEmail);
+          validateParentEmail();
+          setFieldValue('presentSchool', record.school);
+          setFieldValue('completeAddress', record.completeAddress);
+          setDateFieldValue('dob', record.dob);
+          setSelectFieldValue('class', record.className);
+          setSelectFieldValue('caste', record.category, 'Other');
+          setFatherOccupationFromEnquiry(record.occupation, hasExistingData);
+          applyScholarshipFromEnquiry(record.discountScholarship);
+          setMobileNumbersFromEnquiry(record.fatherNo, record.motherNo);
+          setEnquiryImportState(fetchButton, false);
+          closeEnquiryModal();
+          showToast('Enquiry Data Imported Successfully 🌸', 'success');
+        }, 260);
+      }
+
+      function hasExistingMappedData(record) {
+        const mappedValues = [
+          { element: document.getElementById('studentName'), incoming: record.studentName },
+          { element: document.getElementById('fatherName'), incoming: record.fatherName },
+          { element: document.getElementById('motherName'), incoming: record.motherName },
+          { element: document.getElementById('email'), incoming: record.parentEmail },
+          { element: document.getElementById('dob'), incoming: record.dob },
+          { element: document.getElementById('class'), incoming: record.className },
+          { element: document.getElementById('presentSchool'), incoming: record.school },
+          { element: document.getElementById('completeAddress'), incoming: record.completeAddress },
+          { element: document.getElementById('caste'), incoming: record.category },
+          { element: document.getElementById('fatherOccupation'), incoming: record.occupation },
+          { element: document.getElementById('jobDescription'), incoming: record.occupation },
+          { element: document.getElementById('scholarshipAmount'), incoming: record.discountScholarship, ignoreZero: true },
+          { element: document.getElementById('discountPercent'), incoming: record.discountScholarship, ignoreZero: true }
+        ];
+
+        const hasFilledField = mappedValues.some(function(item) {
+          const currentValue = item.element ? getSafeEnquiryValue(item.element.value) : '';
+          const incomingValue = getSafeEnquiryValue(item.incoming);
+          const isDefaultZero = item.ignoreZero && (currentValue === '0' || currentValue === '0.00');
+          return item.element && currentValue && !isDefaultZero && incomingValue;
+        });
+
+        const hasFilledMobile = Array.from(document.querySelectorAll('.mobile-input')).some(function(input) {
+          return getSafeEnquiryValue(input.value);
+        }) && getSafeEnquiryValue(record.fatherNo || record.motherNo);
+
+        return hasFilledField || hasFilledMobile;
+      }
+
+      function setFieldValue(fieldId, value) {
+        const field = document.getElementById(fieldId);
+        const cleanedValue = getSafeEnquiryValue(value);
+        if (field && cleanedValue) {
+          field.value = cleanedValue;
+          field.dispatchEvent(new Event('input', { bubbles: true }));
+          field.dispatchEvent(new Event('change', { bubbles: true }));
+          markFieldAutofilled(field);
+        }
+      }
+
+      function setDateFieldValue(fieldId, value) {
+        const field = document.getElementById(fieldId);
+        const normalizedDate = normalizeDateForInput(value);
+        if (field && normalizedDate) {
+          field.value = normalizedDate;
+          field.dispatchEvent(new Event('input', { bubbles: true }));
+          field.dispatchEvent(new Event('change', { bubbles: true }));
+          markFieldAutofilled(field);
+        }
+      }
+
+      function setSelectFieldValue(fieldId, value, fallbackValue) {
+        const field = document.getElementById(fieldId);
+        const cleanedValue = getSafeEnquiryValue(value);
+
+        if (!field || !cleanedValue) {
+          return;
+        }
+
+        const normalizedValue = cleanedValue.toLowerCase();
+        const matchingOption = Array.from(field.options).find(function(option) {
+          return option.value.toLowerCase() === normalizedValue || option.textContent.trim().toLowerCase() === normalizedValue;
+        });
+
+        if (matchingOption) {
+          field.value = matchingOption.value;
+          field.dispatchEvent(new Event('change', { bubbles: true }));
+          markFieldAutofilled(field);
+          return;
+        }
+
+        if (fallbackValue) {
+          const fallbackOption = Array.from(field.options).find(function(option) {
+            return option.value.toLowerCase() === fallbackValue.toLowerCase();
+          });
+
+          if (fallbackOption) {
+            field.value = fallbackOption.value;
+            field.dispatchEvent(new Event('change', { bubbles: true }));
+            markFieldAutofilled(field);
+          }
+        }
+      }
+
+      function markFieldAutofilled(field) {
+        if (!field) {
+          return;
+        }
+
+        field.classList.remove('autofill-highlight');
+        void field.offsetWidth;
+        field.classList.add('autofill-highlight');
+        window.setTimeout(function() {
+          field.classList.remove('autofill-highlight');
+        }, 950);
+      }
+
+      function setEnquiryImportState(activeButton, isImporting) {
+        document.querySelectorAll('.enquiry-fetch-btn').forEach(function(button) {
+          button.disabled = isImporting;
+        });
+
+        if (activeButton) {
+          if (isImporting) {
+            activeButton.dataset.originalText = activeButton.textContent;
+            activeButton.innerHTML = '<span class="status-spinner small" aria-hidden="true"></span>Importing';
+          } else {
+            activeButton.textContent = activeButton.dataset.originalText || 'Fetch';
+          }
+        }
+      }
+
+      function applyScholarshipFromEnquiry(value) {
+        const cleanedValue = getSafeEnquiryValue(value);
+        if (!cleanedValue) {
+          return;
+        }
+
+        const percentMatch = cleanedValue.match(/(\d+(?:\.\d+)?)\s*%/);
+        if (percentMatch) {
+          setFieldValue('discountPercent', percentMatch[1]);
+          calculateTotal();
+          return;
+        }
+
+        const numericValue = cleanedValue.replace(/[^\d.]/g, '');
+        if (numericValue) {
+          setFieldValue('scholarshipAmount', numericValue);
+          calculateTotal();
+        }
+      }
+
+      function setFatherOccupationFromEnquiry(value, overwriteExisting) {
+        const occupationValue = getSafeEnquiryValue(value);
+        const occupationField = document.getElementById('fatherOccupation');
+
+        if (!occupationField || !occupationValue) {
+          return;
+        }
+
+        const normalizedValue = occupationValue.toLowerCase();
+        const matchingOption = Array.from(occupationField.options).find(function(option) {
+          return option.value.toLowerCase() === normalizedValue || option.textContent.trim().toLowerCase() === normalizedValue;
+        });
+
+        occupationField.value = matchingOption ? matchingOption.value : 'Other';
+        occupationField.dispatchEvent(new Event('change'));
+        markFieldAutofilled(occupationField);
+
+        if (occupationField.value !== 'Defence') {
+          const jobDescriptionField = document.getElementById('jobDescription');
+          if (jobDescriptionField && (overwriteExisting || !jobDescriptionField.value.trim())) {
+            jobDescriptionField.value = occupationValue;
+            markFieldAutofilled(jobDescriptionField);
+          }
+        }
+      }
+
+      function normalizeDateForInput(value) {
+        const cleanedValue = getSafeEnquiryValue(value);
+        if (!cleanedValue) {
+          return '';
+        }
+
+        if (/^\d{4}-\d{2}-\d{2}$/.test(cleanedValue)) {
+          return cleanedValue;
+        }
+
+        const directDate = new Date(cleanedValue);
+        if (!Number.isNaN(directDate.getTime())) {
+          const yyyy = directDate.getFullYear();
+          const mm = String(directDate.getMonth() + 1).padStart(2, '0');
+          const dd = String(directDate.getDate()).padStart(2, '0');
+          return `${yyyy}-${mm}-${dd}`;
+        }
+
+        const simpleDateMatch = cleanedValue.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+        if (simpleDateMatch) {
+          const dd = String(simpleDateMatch[1]).padStart(2, '0');
+          const mm = String(simpleDateMatch[2]).padStart(2, '0');
+          const yyyy = simpleDateMatch[3];
+          return `${yyyy}-${mm}-${dd}`;
+        }
+
+        return '';
+      }
+
+      function getSafeEnquiryValue(value) {
+        return value === null || value === undefined ? '' : String(value).trim();
+      }
+
+      function normalizeSearchText(value) {
+        return getSafeEnquiryValue(value)
+          .toLowerCase()
+          .replace(/[\s\-()+,/]+/g, ' ')
+          .trim();
+      }
+
+      function escapeHtml(value) {
+        return getSafeEnquiryValue(value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function showToast(message, type) {
+        const toastStack = document.getElementById('toastStack');
+        if (!toastStack) {
+          return;
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `toast ${type || ''}`.trim();
+        toast.textContent = message;
+        toastStack.appendChild(toast);
+
+        window.setTimeout(function() {
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateY(-8px)';
+          window.setTimeout(function() {
+            if (toast.parentNode) {
+              toast.parentNode.removeChild(toast);
+            }
+          }, 220);
+        }, 3200);
+      }
+    
+      // === CONDITIONAL LOGIC (Section 1) ===
+      document.getElementById('fatherOccupation').addEventListener('change', function() {
+        const occupation = this.value;
+        const defenceOptions = document.getElementById('defenceOptions');
+        const explainJobOptions = document.getElementById('explainJobOptions');
+        const defenceService = document.getElementById('defenceService');
+        const jobDescription = document.getElementById('jobDescription');
+
+        defenceOptions.classList.add('hidden');
+        explainJobOptions.classList.add('hidden');
+        // Reset required status
+        defenceService.required = false; 
+        jobDescription.required = false;
+        
+        if (occupation === 'Defence') {
+          defenceOptions.classList.remove('hidden');
+          defenceService.required = true; // Make required only if Defence is selected
+        } else if (occupation === 'Government' || occupation === 'Private' || occupation === 'Business' || occupation === 'Other') {
+          if (occupation.length > 0) { // Only show if a non-defence option is selected
+             explainJobOptions.classList.remove('hidden');
+             jobDescription.required = true; // Make required only for these options
+          }
+        }
+      });
+
+      function appendMobileInput(placeholderText, value) {
+        const container = document.getElementById('mobileContainer');
+        const newInputGroup = document.createElement('div');
+        newInputGroup.className = 'mobile-input-group';
+        newInputGroup.innerHTML = `
+          <input type="tel" class="mobile-input" placeholder="${placeholderText}">
+          <button type="button" class="remove-btn">x</button>
+        `;
+
+        const mobileInput = newInputGroup.querySelector('.mobile-input');
+        mobileInput.value = value || '';
+        if (value) {
+          markFieldAutofilled(mobileInput);
+        }
+
+        newInputGroup.querySelector('.remove-btn').onclick = function() {
+          container.removeChild(newInputGroup);
+        };
+
+        container.appendChild(newInputGroup);
+        return mobileInput;
+      }
+      
+      // === ADD/REMOVE MOBILE NUMBER (Section 1) ===
+      document.getElementById('addMobileBtn').addEventListener('click', function() {
+        appendMobileInput('Additional mobile number', '');
+      });
+
+      function setMobileNumbersFromEnquiry(fatherNo, motherNo) {
+        const mobileContainer = document.getElementById('mobileContainer');
+        const primaryInput = mobileContainer.querySelector('.mobile-input');
+        const cleanedFatherNo = getSafeEnquiryValue(fatherNo);
+        const cleanedMotherNo = getSafeEnquiryValue(motherNo);
+
+        Array.from(mobileContainer.querySelectorAll('.mobile-input-group')).slice(1).forEach(function(group) {
+          mobileContainer.removeChild(group);
+        });
+
+        if (primaryInput) {
+          primaryInput.value = cleanedFatherNo || cleanedMotherNo || primaryInput.value;
+          if (cleanedFatherNo || cleanedMotherNo) {
+            markFieldAutofilled(primaryInput);
+          }
+        }
+
+        if (cleanedFatherNo && cleanedMotherNo && cleanedMotherNo !== cleanedFatherNo) {
+          appendMobileInput('Additional mobile number', cleanedMotherNo);
+        }
+      }
+      
+      // === FEES SECTION LOGIC (Section 3 - UPDATED) ===
+      
+      // Add a new *other* fee entry row with dynamic fee types
+      document.getElementById('addFeeBtn').addEventListener('click', function() {
+        const container = document.getElementById('feeContainer');
+        const newFeeEntry = document.createElement('div');
+        newFeeEntry.className = 'fee-entry';
+        
+        // Create dropdown options from feeTypesData
+        let feeOptions = '<option value="" disabled selected>Select fee type...</option>';
+        if (feeTypesData.length > 0) {
+          feeTypesData.forEach(fee => {
+            feeOptions += `<option value="${fee.feeType}" data-amount="${fee.fees}">${fee.feeType}</option>`;
+          });
+        } else {
+          feeOptions += '<option value="" disabled>Loading fee types...</option>';
+        }
+        
+        newFeeEntry.innerHTML = `
+          <select class="fee-type" required>
+            ${feeOptions}
+          </select>
+          <input type="number" class="fee-amount" placeholder="Amount" min="0" step="0.01" required>
+          <button type="button" class="remove-btn">x</button>
+        `;
+        
+        // Add listener for the new "Remove" button
+        newFeeEntry.querySelector('.remove-btn').onclick = function() {
+          container.removeChild(newFeeEntry);
+          calculateTotal(); // Recalculate when a row is removed
+        };
+        
+        // Add listener to fee type dropdown to auto-fill amount
+        newFeeEntry.querySelector('.fee-type').addEventListener('change', function() {
+          const selectedOption = this.options[this.selectedIndex];
+          const amount = selectedOption.getAttribute('data-amount');
+          const amountInput = newFeeEntry.querySelector('.fee-amount');
+          if (amount && amount !== 'null') {
+            amountInput.value = parseFloat(amount).toFixed(2);
+          } else {
+            amountInput.value = '';
+          }
+          calculateTotal();
+        });
+        
+        // Add listener to the new amount field to auto-calculate
+        newFeeEntry.querySelector('.fee-amount').addEventListener('input', calculateTotal);
+        
+        container.appendChild(newFeeEntry);
+      });
+      
+      // NEW: Add a new *installment* entry row
+      document.getElementById('addInstallmentBtn').addEventListener('click', function() {
+        const container = document.getElementById('installmentContainer');
+        const newInstallmentEntry = document.createElement('div');
+        newInstallmentEntry.className = 'installment-entry'; // Use a specific class
+        
+        newInstallmentEntry.innerHTML = `
+          <input type="number" class="installment-amount" placeholder="Installment Amount" min="0" step="0.01" required>
+          <input type="date" class="installment-date" required>
+          <button type="button" class="remove-btn">x</button>
+        `;
+        
+        // Add listener for the new "Remove" button
+        newInstallmentEntry.querySelector('.remove-btn').onclick = function() {
+          container.removeChild(newInstallmentEntry);
+          validateFirstInstallment();
+        };
+
+        newInstallmentEntry.querySelector('.installment-amount').addEventListener('input', validateFirstInstallment);
+        
+        container.appendChild(newInstallmentEntry);
+        validateFirstInstallment();
+      });
+      
+      
+      // Listen for changes on all fee-related inputs
+      document.getElementById('calculateBtn').addEventListener('click', calculateTotal);
+      document.getElementById('registrationFee').addEventListener('input', calculateTotal);
+      document.getElementById('tuitionFeeAmount').addEventListener('input', calculateTotal);
+      document.getElementById('discountPercent').addEventListener('input', calculateTotal);
+      document.getElementById('scholarshipAmount').addEventListener('input', calculateTotal);
+      document.getElementById('gstPercent').addEventListener('input', calculateTotal);
+      
+      /**
+       * Calculates the total fees based on the new logic.
+       * Follows exact calculation order:
+       * Step 1: Sum registration fee, tuition fee, and other fees for the grand total.
+       * Step 2: Apply discount on the full total, including registration fee.
+       * Step 3: Subtract scholarship after discount.
+       * Step 4: Apply GST on the remaining amount after discount and scholarship.
+       * Step 5: The result is the final payable amount.
+       */
+     function calculateTotal() {
+        const registrationFee = parseFloat(document.getElementById('registrationFee').value) || 0;
+        const tuitionFee = parseFloat(document.getElementById('tuitionFeeAmount').value) || 0;
+        
+        // Calculate total of *other* dynamic fees
+        let otherFeesTotal = 0;
+        const otherFeeAmounts = document.querySelectorAll('.fee-amount');
+        otherFeeAmounts.forEach(input => {
+          const value = parseFloat(input.value);
+          if (!isNaN(value)) {
+            otherFeesTotal += value;
+          }
+        });
+        
+        // Total of all fees before any deductions
+        const totalAllFees = registrationFee + tuitionFee + otherFeesTotal;
+        const discountBaseTotal = totalAllFees;
+        
+        // Step 2: Apply discount on the full total, including registration fee.
+        const discountPercent = parseFloat(document.getElementById('discountPercent').value) || 0;
+        const discountAmount = discountBaseTotal * (discountPercent / 100); 
+        
+        // Step 3: Subtract discount from the full total
+        const afterDiscount = discountBaseTotal - discountAmount;
+        
+        // Step 4: Apply scholarship after discount
+        const scholarshipAmount = parseFloat(document.getElementById('scholarshipAmount').value) || 0;
+        const afterScholarship = afterDiscount - scholarshipAmount;
+        
+        // Step 5: Apply GST on the remaining amount
+        const gstPercent = parseFloat(document.getElementById('gstPercent').value) || 0;
+        const gstAmount = afterScholarship * (gstPercent / 100);
+        
+        const finalPayableAmount = afterScholarship + gstAmount;
+        
+        // Update display
+        document.getElementById('totalAmountDisplay').textContent = totalAllFees.toFixed(2);
+        document.getElementById('registrationFeeDisplay').textContent = registrationFee.toFixed(2);
+        document.getElementById('discountBaseDisplay').textContent = discountBaseTotal.toFixed(2);
+        document.getElementById('discountAmountDisplay').textContent = discountAmount.toFixed(2);
+        document.getElementById('finalCostDisplay').textContent = finalPayableAmount.toFixed(2);
+        
+        // Store values in hidden inputs for submission
+        document.getElementById('totalAmountInput').value = totalAllFees.toFixed(2);
+        document.getElementById('finalCostInput').value = finalPayableAmount.toFixed(2);
+        validateFirstInstallment();
+      }
+
+      function validateFirstInstallment() {
+        const installmentEntries = document.querySelectorAll('.installment-entry');
+        const registrationFee = parseFloat(document.getElementById('registrationFee').value) || 0;
+
+        installmentEntries.forEach((entry, index) => {
+          const amountInput = entry.querySelector('.installment-amount');
+          if (!amountInput) {
+            return;
+          }
+
+          if (index === 0) {
+            const installmentAmount = parseFloat(amountInput.value);
+            if (!isNaN(installmentAmount) && installmentAmount <= registrationFee) {
+              amountInput.setCustomValidity(`First installment must be greater than the registration fee (Rs. ${registrationFee.toFixed(2)}).`);
+            } else {
+              amountInput.setCustomValidity('');
+            }
+          } else {
+            amountInput.setCustomValidity('');
+          }
+        });
+      }
+
+      function setStatus(message, type, isLoading) {
+        const statusDiv = document.getElementById('status');
+        if (!statusDiv) {
+          return;
+        }
+
+        const spinner = isLoading ? '<span class="status-spinner" aria-hidden="true"></span>' : '';
+        statusDiv.innerHTML = `${spinner}${message || ''}`;
+        statusDiv.className = type || '';
+      }
+
+      function setSubmitLoading(isLoading, label) {
+        const submitBtn = document.getElementById('submitBtn');
+        if (!submitBtn) {
+          return;
+        }
+
+        if (!submitBtn.dataset.defaultText) {
+          submitBtn.dataset.defaultText = submitBtn.textContent;
+        }
+
+        submitBtn.disabled = isLoading;
+        submitBtn.innerHTML = isLoading
+          ? `<span class="status-spinner small" aria-hidden="true"></span>${label || 'Submitting...'}`
+          : submitBtn.dataset.defaultText;
+      }
+      
+      
+      // === FORM SUBMISSION ===
+      document.getElementById('admissionForm').addEventListener('submit', handleFormSubmit);
+
+      async function handleFormSubmit(e) {
+        e.preventDefault();
+
+        if (isSubmitting) {
+          return;
+        }
+        
+        // Manually trigger calculation one last time
+        calculateTotal(); 
+
+        const form = document.getElementById('admissionForm');
+        validateFirstInstallment();
+        validateParentEmail();
+        if (!form.reportValidity()) {
+          return;
+        }
+        
+        isSubmitting = true;
+        setSubmitLoading(true, 'Submitting...');
+        setStatus('Preparing admission submission...', '', true);
+
+        try {
+          // 1. Gather all text/select form data
+          // === UPDATED FORMDATA (with all new fields) ===
+          const formData = {
+            // Section 1
+            applicationDate: document.getElementById('applicationDate').value, // <-- NEW
+            studentName: document.getElementById('studentName').value,
+            fatherName: document.getElementById('fatherName').value,
+            motherName: document.getElementById('motherName').value,
+            dob: document.getElementById('dob').value,
+            startSession: document.getElementById('startSession').value,
+            endSession: document.getElementById('endSession').value,
+            email: document.getElementById('email').value.trim(),
+            parentEmail: document.getElementById('email').value.trim(),
+            caste: document.getElementById('caste').value,
+            fatherOccupation: document.getElementById('fatherOccupation').value,
+            defenceService: document.getElementById('defenceService').value, 
+            jobDescription: document.getElementById('jobDescription').value, 
+            class: document.getElementById('class').value,
+            presentSchool: document.getElementById('presentSchool').value,
+            completeAddress: document.getElementById('completeAddress').value,
+            advanceCheck: document.getElementById('advanceCheck').value,
+            mobileNumbers: getMobileNumbers(),
+            // Section 3
+            program: document.getElementById('program').value,
+            registrationFee: document.getElementById('registrationFee').value,
+            tuitionFee: document.getElementById('tuitionFeeAmount').value,
+            feeDetails: getFeeDetails(), // Get JSON string of *other* fees
+            totalAmount: document.getElementById('totalAmountInput').value,
+            discountPercent: document.getElementById('discountPercent').value,
+            scholarshipAmount: document.getElementById('scholarshipAmount').value,
+            gstPercent: document.getElementById('gstPercent').value,
+            finalCost: document.getElementById('finalCostInput').value,
+            installmentDetails: getInstallmentDetails(),
+            // Section 4
+            termsAgreement: document.getElementById('termsAgree').checked ? 'Agreed' : 'Not Agreed'
+          };
+          // === END UPDATED FORMDATA ===
+
+          // 2. Gather all file data (No longer throws error for missing optional files)
+          setStatus('Reading uploaded files...', '', true);
+          const filesData = {};
+          
+          const fileInputs = [
+            { id: 'photo', key: 'photo'}, // removed required: true
+            { id: 'aadhaar', key: 'aadhaar'}, // removed required: true
+            { id: 'dobCert', key: 'dobCert'}, // removed required: true
+            { id: 'domicile', key: 'domicile'}, // removed required: true
+            { id: 'casteCert', key: 'casteCert' }, // Was already optional
+            { id: 'serviceCert', key: 'serviceCert' } // Was already optional
+          ];
+
+          const filePromises = fileInputs.map(input => {
+            const file = document.getElementById(input.id).files[0];
+            if (file) {
+              return readFileAsBase64(file).then(fileInfo => ({ key: input.key, ...fileInfo }));
+            }
+            // No error thrown if file is missing and not required
+            return null; 
+          });
+          
+          const fileResults = await Promise.all(filePromises);
+          
+          fileResults.forEach(result => {
+            if (result) {
+              filesData[result.key] = {
+                fileName: result.fileName,
+                mimeType: result.mimeType,
+                base64Data: result.base64Data
+              };
+            }
+          });
+
+          // 3. Send data to server via full-stack REST API
+          setStatus('Saving admission, generating institutional PDF, and sending confirmation...', '', true);
+          const response = await fetch('/api/admission-form/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ formData, filesData })
+          });
+          const submitResult = await response.json();
+          if (response.ok && submitResult.status === 'success') {
+            onSuccess(submitResult);
+          } else {
+            onFailure(new Error(submitResult.message || 'Submission failed.'));
+          }
+
+        } catch (error) {
+          // This catch block might now only catch errors from gathering text data or during file reading itself
+          onFailure(error);
+        }
+      }
+
+      function readFileAsBase64(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const base64Data = reader.result.split(',')[1]; // Get just the base64 part
+            resolve({
+              fileName: file.name,
+              mimeType: file.type,
+              base64Data: base64Data
+            });
+          };
+          reader.onerror = (error) => reject(error);
+          reader.readAsDataURL(file);
+        });
+      }
+
+      function getMobileNumbers() {
+        const inputs = document.querySelectorAll('.mobile-input');
+        const numbers = [];
+        inputs.forEach(input => {
+          if (input.value.trim() !== '') {
+            numbers.push(input.value.trim());
+          }
+        });
+        return JSON.stringify(numbers); 
+      }
+      
+      /**
+       * Collects all *other* fee details into a JSON string.
+       */
+      function getFeeDetails() {
+        const feeEntries = document.querySelectorAll('.fee-entry');
+        const details = [];
+        feeEntries.forEach(entry => {
+          const typeSelect = entry.querySelector('.fee-type');
+          const amountInput = entry.querySelector('.fee-amount');
+          const type = typeSelect ? typeSelect.value : '';
+          const amount = amountInput ? amountInput.value : '';
+          if (type.trim() !== '' && amount.trim() !== '') {
+            details.push({ feeType: type, amount: amount });
+          }
+        });
+        return JSON.stringify(details); 
+      }
+      
+      /**
+       * NEW: Collects all *installment* details into a JSON string.
+       */
+      function getInstallmentDetails() {
+        const installmentEntries = document.querySelectorAll('.installment-entry');
+        const details = [];
+        installmentEntries.forEach(entry => {
+          const amount = entry.querySelector('.installment-amount').value;
+          const date = entry.querySelector('.installment-date').value;
+          if (amount.trim() !== '' && date.trim() !== '') {
+            details.push({ amount: amount, date: date });
+          }
+        });
+        return JSON.stringify(details); 
+      }
+      
+      function onSuccess(response) {
+        let res;
+        try {
+          res = typeof response === 'string' ? JSON.parse(response) : response;
+        } catch (e) {
+          onFailure(new Error("Received an invalid response from server."));
+          return;
+        }
+
+        const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+        
+        if (res.status === 'success') {
+          const statusType = res.emailSent || res.emailDuplicatePrevented || res.emailSkipped ? 'success' : 'warning';
+          setStatus(`${res.message}<br>StudentsId: <strong>${res.studentId}</strong>`, statusType, false);
+          
+          // Auto-download PDF if URL is provided
+          if (res.pdfUrl && res.studentId) {
+            setTimeout(() => {
+              downloadPDF(res.pdfUrl, `Admission_Form_${res.studentId}.pdf`, { preserveStatus: true });
+            }, 1000); // Small delay to show success message first
+          }
+          
+          // Show PDF download button (as backup)
+          if (res.studentId) {
+            downloadPdfBtn.classList.remove('hidden');
+            downloadPdfBtn.onclick = function() {
+              if (res.pdfUrl) {
+                downloadPDF(res.pdfUrl, `Admission_Form_${res.studentId}.pdf`);
+              } else {
+                downloadPDF(res.studentId);
+              }
+            };
+          }
+          
+          document.getElementById('admissionForm').reset();
+          
+          // Manually reset all conditional fields
+          document.getElementById('defenceOptions').classList.add('hidden');
+          document.getElementById('explainJobOptions').classList.add('hidden');
+          document.getElementById('defenceService').required = false;
+          document.getElementById('jobDescription').required = false;
+          
+          // Remove extra mobile number fields
+          const mobileContainer = document.getElementById('mobileContainer');
+          while (mobileContainer.children.length > 1) { 
+            mobileContainer.removeChild(mobileContainer.lastChild);
+          }
+          
+          // Reset fees section
+          document.getElementById('registrationFee').value = '';
+          document.getElementById('tuitionFeeAmount').value = ''; 
+          document.getElementById('feeContainer').innerHTML = ''; // Clear fee entries
+          document.getElementById('installmentContainer').innerHTML = '';
+          document.getElementById('totalAmountDisplay').textContent = '0.00';
+          document.getElementById('registrationFeeDisplay').textContent = '0.00';
+          document.getElementById('discountBaseDisplay').textContent = '0.00';
+          document.getElementById('discountAmountDisplay').textContent = '0.00';
+          document.getElementById('finalCostDisplay').textContent = '0.00';
+          document.getElementById('discountPercent').value = '0';
+          document.getElementById('scholarshipAmount').value = '0';
+          document.getElementById('gstPercent').value = '0';
+          document.getElementById('totalAmountInput').value = '';
+          document.getElementById('finalCostInput').value = '';
+          
+          document.getElementById('termsAgree').checked = false;
+          
+          // Re-set the application date
+          setApplicationDate();
+          
+          // Reset session dates
+          document.getElementById('startSession').value = '';
+          document.getElementById('endSession').value = '';
+
+        } else {
+          setStatus(res.message, 'error', false);
+        }
+        isSubmitting = false;
+        setSubmitLoading(false);
+      }
+      
+      // === PDF DOWNLOAD FUNCTIONALITY ===
+      function downloadPDF(param, filename, options) {
+        const downloadBtn = document.getElementById('downloadPdfBtn');
+        const preserveStatus = options && options.preserveStatus;
+        
+        // If param is a URL, download directly
+        if (param && param.startsWith('http')) {
+          // Create temporary link for download
+          const link = document.createElement('a');
+          link.href = param;
+          link.download = filename || 'Admission_Form.pdf';
+          link.target = '_blank';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          if (!preserveStatus) {
+            setStatus('PDF downloaded successfully!', 'success', false);
+          }
+          return;
+        }
+        
+        // Otherwise, treat as studentId and generate PDF
+        const studentId = param;
+        downloadBtn.disabled = true;
+        downloadBtn.textContent = 'Generating PDF...';
+        setStatus('Generating PDF, please wait...', '', true);
+        
+        try {
+          const res = await fetch('/api/admission-form/pdf/' + encodeURIComponent(studentId));
+          const pdfResult = await res.json();
+          if (pdfResult.success && pdfResult.pdfUrl) {
+            window.open(pdfResult.pdfUrl, '_blank');
+            setStatus('PDF generated successfully!', 'success', false);
+          } else {
+            setStatus('Error generating PDF: ' + (pdfResult.message || 'Failed to generate PDF'), 'error', false);
+          }
+        } catch (error) {
+          setStatus('Error generating PDF: ' + error.message, 'error', false);
+        } finally {
+          downloadBtn.disabled = false;
+          downloadBtn.textContent = 'Download PDF';
+        }
+      }
+      
+      function onFailure(error) {
+        isSubmitting = false;
+        setStatus('Error: ' + error.message, 'error', false);
+        setSubmitLoading(false);
+      }
+      
+    </script>
+  </body>
+</html>

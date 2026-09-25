@@ -21,7 +21,7 @@ export default function VoucherModal({
       <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '780px' }}>
         <div className="modal-header">
           <div>
-            <div style={{ fontSize: '11px', fontWeight: 800, color: '#b3132a', letterSpacing: '0.14em', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '11px', fontWeight: 800, color: '#4338ca', letterSpacing: '0.14em', textTransform: 'uppercase' }}>
               Institutional Fee Voucher
             </div>
             <h3 className="modal-title" style={{ marginTop: 2 }}>
@@ -35,7 +35,7 @@ export default function VoucherModal({
 
         <div className="voucher-preview-box">
           {/* Status Bar */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fdf2f4', padding: '10px 14px', borderRadius: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', border: '1px solid #e2e8f0', padding: '10px 14px', borderRadius: '12px' }}>
             <span style={{ fontSize: '12px', color: '#64748b' }}>Voucher Status</span>
             <span className={`voucher-badge ${status === 'Given' ? 'given' : 'not-given'}`}>
               {status}
@@ -93,8 +93,8 @@ export default function VoucherModal({
                   <span>{display.otherFees}</span>
                 </div>
                 {voucherData.otherFeesBreakdown && voucherData.otherFeesBreakdown.length > 0 && (
-                  <div style={{ background: '#fff', padding: '8px 12px', borderRadius: 8, margin: '6px 0', border: '1px solid #ebd0d5' }}>
-                    <div style={{ fontSize: '10px', fontWeight: 800, color: '#8f1024', textTransform: 'uppercase', marginBottom: 4 }}>
+                  <div style={{ background: '#fff', padding: '8px 12px', borderRadius: 8, margin: '6px 0', border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: '10px', fontWeight: 800, color: '#4338ca', textTransform: 'uppercase', marginBottom: 4 }}>
                       Other Fees Breakdown
                     </div>
                     {voucherData.otherFeesBreakdown.map((item, idx) => (
@@ -108,7 +108,7 @@ export default function VoucherModal({
               </>
             )}
 
-            <div className="voucher-kv-row" style={{ fontWeight: 700, borderTop: '1px solid #ebc8ce', paddingTop: 6 }}>
+            <div className="voucher-kv-row" style={{ fontWeight: 700, borderTop: '1px solid #e2e8f0', paddingTop: 6 }}>
               <span>Total Standard Amount:</span>
               <span>{display.totalAmount}</span>
             </div>
@@ -159,7 +159,7 @@ export default function VoucherModal({
         </div>
 
         {/* Modal Actions Footer */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, paddingTop: 16, borderTop: '1px solid #f1d7db', flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, paddingTop: 16, borderTop: '1px solid #e2e8f0', flexWrap: 'wrap', gap: 10 }}>
           <div style={{ display: 'flex', gap: 8 }}>
             {status === 'Given' ? (
               <button

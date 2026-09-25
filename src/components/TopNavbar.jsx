@@ -10,12 +10,9 @@ export default function TopNavbar({
 }) {
   const openExternal = (type) => {
     const urls = {
-      admission:
-        'https://script.google.com/macros/s/AKfycbzvsXrqL2khQKkqVUlvBjztFHfKBbiG-Z6VaKsSxRWsn58FLYrmmGfhwtJGWsAO6-Pk/exec',
-      enquiry:
-        'https://script.google.com/macros/s/AKfycbxw1MbqJEAaSW0nW5zMnqM1ufBFiHjuMmDy9Q8Ko93Y4l_CRas9AtjsgSTpteT3p70x/exec',
-      studentReport:
-        'https://script.google.com/macros/s/AKfycbz1_r60pqxeo_r0yttcK7Z1HgAsBwbhE0q7XG9KE2poBuQGv1Kw8ajaHMzBTvzkZws/exec'
+      admission: '/admission-form',
+      enquiry: '/enquiry-form',
+      studentReport: 'https://prime-student-report.onrender.com'
     };
     if (urls[type]) window.open(urls[type], '_blank', 'noopener,noreferrer');
   };
@@ -28,15 +25,16 @@ export default function TopNavbar({
       <div className="top-navbar">
         <div className="brand-section">
           <img
-            src="/tpc-logo.jpg"
+            src="/tpc-logo.png"
             alt="The Prime Classes"
             className="brand-logo-img"
             onError={(e) => {
-              e.target.style.display = 'none';
+              e.target.onerror = null;
+              e.target.src = '/tpc-logo.jpg';
             }}
           />
           <div className="brand-block">
-            <p className="eyebrow">The Prime Classes</p>
+            <p className="eyebrow">THE PRIME CLASSES • RIMC | RMS | SAINIK SCHOOL | FOUNDATION</p>
             <h1 className="page-title">
               Management <span className="page-title-highlight">{viewTitle}</span>
             </h1>
