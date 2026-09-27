@@ -19,18 +19,35 @@ let dbMode = 'none'; // 'pg' or 'sqlite'
 let pgPool = null;
 let sqliteDb = null;
 
+function getOptimizedConnectionString(rawUrl) {
+  try {
+    const u = new URL(rawUrl);
+    // If using Supabase pooler on port 5432 or default, switch to port 6543 (transaction mode)
+    // to avoid (EMAXCONNSESSION) max clients reached in session mode error
+    if (u.hostname.includes('pooler.supabase.com')) {
+      if (u.port === '5432' || !u.port) {
+        console.log('[DB] Optimizing Supabase connection: Switching from port 5432 to 6543 (Transaction Pooler).');
+        u.port = '6543';
+      }
+    }
+    return u.toString();
+  } catch (e) {
+    return rawUrl;
+  }
+}
+
 // Initialize PostgreSQL connection pool if DATABASE_URL is provided
 if (process.env.DATABASE_URL) {
   try {
-    const connectionString = process.env.DATABASE_URL;
+    const connectionString = getOptimizedConnectionString(process.env.DATABASE_URL);
     pgPool = new pg.Pool({
       connectionString,
       ssl: {
         rejectUnauthorized: false
       },
-      max: 10,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 8000
+      max: 5,
+      idleTimeoutMillis: 15000,
+      connectionTimeoutMillis: 10000
     });
 
     pgPool.on('error', (err) => {
@@ -127,9 +144,26 @@ export async function initDatabase() {
       dbMode = 'pg';
       console.log('[DB] Connected to PostgreSQL (Supabase) successfully.');
     } catch (pgErr) {
-      console.warn('[DB] PostgreSQL connection check failed:', pgErr.message);
-      console.warn('[DB] Falling back to local SQLite3 database...');
-      await initSqlite();
+      console.warn('[DB] Optimized PostgreSQL connection check failed:', pgErr.message);
+      try {
+        console.log('[DB] Trying fallback connection with raw DATABASE_URL...');
+        const fallbackPool = new pg.Pool({
+          connectionString: process.env.DATABASE_URL,
+          ssl: { rejectUnauthorized: false },
+          max: 2,
+          connectionTimeoutMillis: 5000
+        });
+        const client = await fallbackPool.connect();
+        await client.query('SELECT 1');
+        client.release();
+        pgPool = fallbackPool;
+        dbMode = 'pg';
+        console.log('[DB] Connected to PostgreSQL fallback successfully.');
+      } catch (rawErr) {
+        console.warn('[DB] PostgreSQL fallback also failed:', rawErr.message);
+        console.warn('[DB] Falling back to local SQLite3 database...');
+        await initSqlite();
+      }
     }
   } else {
     await initSqlite();
