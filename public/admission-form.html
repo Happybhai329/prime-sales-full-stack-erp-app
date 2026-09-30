@@ -3176,7 +3176,7 @@
       }
       
       // === PDF DOWNLOAD FUNCTIONALITY ===
-      function downloadPDF(param, filename, options) {
+      async function downloadPDF(param, filename, options) {
         const downloadBtn = document.getElementById('downloadPdfBtn');
         const preserveStatus = options && options.preserveStatus;
         
