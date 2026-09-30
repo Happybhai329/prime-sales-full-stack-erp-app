@@ -36,7 +36,7 @@ export default function TopNavbar({
           <div className="brand-block">
             <p className="eyebrow">THE PRIME CLASSES • RIMC | RMS | SAINIK SCHOOL | FOUNDATION</p>
             <h1 className="page-title">
-              Management <span className="page-title-highlight">{viewTitle}</span>
+              Sales Dashboard <span className="page-title-highlight">• {viewTitle}</span>
             </h1>
             <p className="header-note">
               Centralized Admissions, Enquiries, Financial Breakups, and Institutional Vouchers

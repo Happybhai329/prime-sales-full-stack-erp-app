@@ -621,7 +621,7 @@ export async function generateVoucherPdfBuffer(voucherData) {
         .fontSize(8)
         .fillColor('#64748b')
         .font('Helvetica-Oblique')
-        .text('* This voucher is an official computer-verified institutional record of The Prime Classes ERP System.', margin, curY);
+        .text('* This voucher is an official computer-verified institutional record of The Prime Classes Sales System.', margin, curY);
 
       doc
         .fontSize(8.5)

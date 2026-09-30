@@ -45,7 +45,7 @@ app.get(['/health', '/api/health', '/ping'], async (req, res) => {
       return res.status(200).json({
         status: 'ok',
         database: 'connected',
-        service: 'The Prime Classes ERP Backend',
+        service: 'The Prime Classes Sales Backend',
         uptimeSeconds: Math.floor(process.uptime()),
         timestamp: new Date().toISOString()
       });
@@ -60,7 +60,7 @@ app.get(['/health', '/api/health', '/ping'], async (req, res) => {
 
   res.status(200).json({
     status: 'ok',
-    service: 'The Prime Classes ERP Backend',
+    service: 'The Prime Classes Sales Backend',
     uptimeSeconds: Math.floor(process.uptime()),
     timestamp: new Date().toISOString()
   });

@@ -1,7 +1,7 @@
 {
   "name": "prime-sales-full-stack-erp-app",
   "version": "1.0.0",
-  "description": "The Prime Classes Sales & Management Full-Stack ERP Dashboard",
+  "description": "The Prime Classes Sales Dashboard",
   "main": "server/index.js",
   "type": "module",
   "scripts": {
