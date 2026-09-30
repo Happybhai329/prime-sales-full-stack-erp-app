@@ -457,3 +457,88 @@ export async function appendAdmission(rowValues) {
   return res.data;
 }
 
+/**
+ * Creates a student-specific subfolder in Google Drive and uploads student documents
+ */
+export async function uploadStudentFiles(studentName, studentId, filesData = {}) {
+  const { drive } = getGoogleClients();
+  const fileKeys = Object.keys(filesData || {});
+  if (!fileKeys.length) return {};
+
+  let folderId = VOUCHER_FOLDER_ID;
+
+  // 1. Try to create/find student subfolder: [StudentName]_[StudentID]
+  try {
+    const folderName = `${String(studentName || 'Student').trim()}_${String(studentId || Date.now()).trim()}`;
+    const query = `'${VOUCHER_FOLDER_ID}' in parents and name = '${folderName.replace(/'/g, "\\'")}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
+    const searchRes = await drive.files.list({ q: query, fields: 'files(id, name)' });
+
+    if (searchRes.data.files && searchRes.data.files.length > 0) {
+      folderId = searchRes.data.files[0].id;
+    } else {
+      const folderRes = await drive.files.create({
+        resource: {
+          name: folderName,
+          mimeType: 'application/vnd.google-apps.folder',
+          parents: [VOUCHER_FOLDER_ID]
+        },
+        fields: 'id'
+      });
+      folderId = folderRes.data.id;
+      // Share folder
+      try {
+        await drive.permissions.create({
+          fileId: folderId,
+          requestBody: { role: 'reader', type: 'anyone' }
+        });
+      } catch (e) {}
+    }
+  } catch (folderErr) {
+    console.warn('[GoogleDrive] Could not create student folder, falling back to VOUCHER_FOLDER_ID:', folderErr.message);
+    folderId = VOUCHER_FOLDER_ID;
+  }
+
+  // 2. Upload each file asynchronously
+  const uploadedUrls = {};
+
+  for (const key of fileKeys) {
+    const fileObj = filesData[key];
+    if (!fileObj || !fileObj.base64Data) continue;
+
+    try {
+      const fileBuffer = Buffer.from(fileObj.base64Data, 'base64');
+      const bufferStream = new stream.PassThrough();
+      bufferStream.end(fileBuffer);
+
+      const fileName = `${studentId}_${key}_${fileObj.fileName || 'document.pdf'}`;
+      const uploadRes = await drive.files.create({
+        resource: {
+          name: fileName,
+          parents: [folderId]
+        },
+        media: {
+          mimeType: fileObj.mimeType || 'application/octet-stream',
+          body: bufferStream
+        },
+        fields: 'id, webViewLink'
+      });
+
+      const fileId = uploadRes.data.id;
+      try {
+        await drive.permissions.create({
+          fileId: fileId,
+          requestBody: { role: 'reader', type: 'anyone' }
+        });
+      } catch (e) {}
+
+      uploadedUrls[key] = uploadRes.data.webViewLink || `https://drive.google.com/file/d/${fileId}/view`;
+      console.log(`[GoogleDrive] Uploaded ${key} for ${studentId}: ${uploadedUrls[key]}`);
+    } catch (uploadErr) {
+      console.error(`[GoogleDrive] Failed uploading ${key} for ${studentId}:`, uploadErr.message);
+      uploadedUrls[key] = '';
+    }
+  }
+
+  return uploadedUrls;
+}
+

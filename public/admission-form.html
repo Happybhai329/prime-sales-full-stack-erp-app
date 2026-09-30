@@ -765,7 +765,7 @@
         width: 17px;
         height: 17px;
         margin-right: 9px;
-        border: 2px solid rgba(199, 77, 133, 0.18);
+        border: 2px solid rgba(30, 64, 175, 0.18);
         border-top-color: var(--primary);
         border-radius: 999px;
         vertical-align: -3px;
@@ -792,11 +792,11 @@
 
       .toast {
         padding: 14px 16px;
-        border: 1px solid rgba(199, 77, 133, 0.18);
+        border: 1px solid rgba(30, 64, 175, 0.18);
         border-radius: 18px;
-        background: rgba(255, 252, 255, 0.96);
+        background: #ffffff;
         color: var(--text);
-        box-shadow: 0 18px 38px rgba(143, 47, 96, 0.18);
+        box-shadow: 0 18px 38px rgba(15, 23, 42, 0.15);
         font-weight: 800;
         transform: translateY(-8px);
         opacity: 0;
@@ -804,13 +804,13 @@
       }
 
       .toast.success {
-        background: linear-gradient(135deg, #fff9fc, #edf8ef);
-        color: #245b3b;
+        background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+        color: #166534;
       }
 
       .toast.error {
-        background: linear-gradient(135deg, #fff7fb, #fff1f6);
-        color: #8f375d;
+        background: linear-gradient(135deg, #fef2f2, #fee2e2);
+        color: #991b1b;
       }
 
       @keyframes spin {
@@ -828,395 +828,29 @@
 
       @keyframes autofillPulse {
         0% {
-          box-shadow: 0 0 0 0 rgba(199, 77, 133, 0.24);
+          box-shadow: 0 0 0 0 rgba(30, 64, 175, 0.24);
         }
         55% {
-          box-shadow: 0 0 0 7px rgba(199, 77, 133, 0.12);
+          box-shadow: 0 0 0 7px rgba(30, 64, 175, 0.12);
         }
         100% {
           box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.74);
         }
       }
 
-      :root {
-        --bg-top: #fff7fb;
-        --bg-bottom: #ffe7f1;
-        --surface: rgba(255, 252, 255, 0.92);
-        --surface-strong: #7f2d58;
-        --surface-muted: #fff2f8;
-        --border: rgba(193, 92, 138, 0.18);
-        --border-strong: rgba(170, 77, 120, 0.28);
-        --text: #4e2540;
-        --muted: #836275;
-        --primary: #c74d85;
-        --primary-dark: #8f2f60;
-        --accent: #ff90ba;
-        --accent-soft: #ffe2ee;
-        --success: #5d8d66;
-        --success-soft: #edf8ef;
-        --danger: #bc4f78;
-        --danger-soft: #fff1f6;
-        --shadow-lg: 0 32px 72px rgba(152, 77, 117, 0.18);
-        --shadow-md: 0 18px 38px rgba(168, 95, 132, 0.14);
-      }
 
-      body {
-        position: relative;
-        overflow-x: hidden;
-        background:
-          radial-gradient(circle at 10% 8%, rgba(255, 190, 215, 0.46), transparent 24%),
-          radial-gradient(circle at 86% 10%, rgba(255, 218, 233, 0.72), transparent 20%),
-          radial-gradient(circle at 76% 78%, rgba(222, 122, 173, 0.2), transparent 26%),
-          linear-gradient(180deg, #fff8fc 0%, #ffeaf3 50%, #fff6fa 100%);
-      }
 
-      body::before,
-      body::after {
-        content: "";
-        position: fixed;
-        border-radius: 999px;
-        pointer-events: none;
-        z-index: 0;
-        filter: blur(28px);
-      }
 
-      body::before {
-        width: 420px;
-        height: 420px;
-        top: -150px;
-        left: -170px;
-        background: radial-gradient(circle, rgba(255, 195, 218, 0.7), transparent 68%);
-      }
 
-      body::after {
-        width: 360px;
-        height: 360px;
-        right: -120px;
-        bottom: -140px;
-        background: radial-gradient(circle, rgba(255, 220, 234, 0.76), transparent 70%);
-      }
 
-      .floral-stage {
-        position: fixed;
-        inset: 0;
-        overflow: hidden;
-        pointer-events: none;
-        z-index: 0;
-      }
 
-      .flower {
-        position: absolute;
-        aspect-ratio: 1;
-        opacity: 0.42;
-        filter: drop-shadow(0 16px 24px rgba(174, 89, 129, 0.16));
-        background:
-          radial-gradient(circle at 50% 50%, rgba(180, 72, 117, 0.95) 0 13%, transparent 14%),
-          radial-gradient(circle at 50% 6%, rgba(255, 205, 223, 0.96) 0 28%, transparent 29%),
-          radial-gradient(circle at 94% 50%, rgba(255, 191, 215, 0.92) 0 28%, transparent 29%),
-          radial-gradient(circle at 50% 94%, rgba(255, 205, 223, 0.96) 0 28%, transparent 29%),
-          radial-gradient(circle at 6% 50%, rgba(255, 191, 215, 0.92) 0 28%, transparent 29%),
-          radial-gradient(circle at 23% 23%, rgba(255, 227, 236, 0.96) 0 24%, transparent 25%),
-          radial-gradient(circle at 77% 23%, rgba(255, 219, 232, 0.96) 0 24%, transparent 25%),
-          radial-gradient(circle at 23% 77%, rgba(255, 219, 232, 0.96) 0 24%, transparent 25%),
-          radial-gradient(circle at 77% 77%, rgba(255, 227, 236, 0.96) 0 24%, transparent 25%);
-      }
 
-      .flower::after {
-        content: "";
-        position: absolute;
-        left: 50%;
-        bottom: -52px;
-        width: 3px;
-        height: 90px;
-        border-radius: 999px;
-        background: linear-gradient(180deg, rgba(122, 164, 110, 0), rgba(122, 164, 110, 0.56));
-        transform: translateX(-50%) rotate(12deg);
-      }
 
-      .flower-one {
-        top: 38px;
-        left: -28px;
-        width: 210px;
-        transform: rotate(-18deg);
-      }
 
-      .flower-two {
-        top: 110px;
-        right: -26px;
-        width: 156px;
-        transform: rotate(12deg);
-      }
 
-      .flower-three {
-        bottom: 104px;
-        left: -44px;
-        width: 184px;
-        transform: rotate(8deg);
-      }
 
-      .flower-four {
-        right: 18px;
-        bottom: -12px;
-        width: 220px;
-        transform: rotate(-14deg);
-      }
 
-      .page-shell {
-        position: relative;
-        z-index: 1;
-        isolation: isolate;
-      }
 
-      .hero-panel {
-        border: 1px solid rgba(255, 255, 255, 0.28);
-        background:
-          radial-gradient(circle at top right, rgba(255, 255, 255, 0.18), transparent 28%),
-          linear-gradient(135deg, rgba(116, 27, 72, 0.98), rgba(199, 73, 126, 0.92) 56%, rgba(255, 182, 211, 0.9) 100%);
-        box-shadow: 0 34px 78px rgba(151, 74, 117, 0.26);
-      }
-
-      .hero-panel::before {
-        width: 320px;
-        height: 320px;
-        top: -144px;
-        right: -112px;
-        background: radial-gradient(circle, rgba(255, 255, 255, 0.3), transparent 70%);
-      }
-
-      .hero-panel::after {
-        width: 260px;
-        height: 260px;
-        left: 44%;
-        bottom: -126px;
-        background: radial-gradient(circle, rgba(255, 220, 233, 0.42), transparent 72%);
-      }
-
-      .eyebrow {
-        border-color: rgba(255, 255, 255, 0.3);
-        background: rgba(255, 255, 255, 0.14);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
-      }
-
-      .hero-copy h1,
-      .form-title {
-        font-family: "Cormorant Garamond", Georgia, serif;
-      }
-
-      .hero-copy h1 {
-        font-size: clamp(2.7rem, 5.4vw, 4.8rem);
-        line-height: 0.98;
-      }
-
-      .hero-copy p {
-        color: rgba(255, 247, 252, 0.9);
-      }
-
-      .hero-chip {
-        background: rgba(255, 255, 255, 0.16);
-        border-color: rgba(255, 255, 255, 0.22);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
-      }
-
-      .hero-stat {
-        background: rgba(255, 255, 255, 0.14);
-        border-color: rgba(255, 255, 255, 0.18);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
-      }
-
-      #formContainer {
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 244, 249, 0.9));
-        border-color: rgba(255, 255, 255, 0.82);
-        box-shadow: 0 28px 60px rgba(156, 83, 122, 0.18);
-      }
-
-      .form-intro {
-        border-bottom-color: rgba(199, 77, 133, 0.14);
-      }
-
-      .form-kicker,
-      .form-note-label {
-        color: var(--primary-dark);
-      }
-
-      .form-note {
-        border-color: rgba(199, 77, 133, 0.16);
-        background: linear-gradient(135deg, rgba(255, 238, 245, 0.96), rgba(255, 221, 234, 0.82));
-        box-shadow: 0 18px 34px rgba(185, 95, 136, 0.13);
-      }
-
-      .form-section {
-        position: relative;
-        overflow: hidden;
-        border-color: rgba(191, 90, 136, 0.14);
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(255, 242, 248, 0.92));
-        box-shadow: 0 20px 40px rgba(173, 93, 132, 0.1);
-      }
-
-      .form-section::after {
-        content: "";
-        position: absolute;
-        top: -28px;
-        right: -18px;
-        width: 120px;
-        height: 120px;
-        border-radius: 999px;
-        background:
-          radial-gradient(circle at 50% 50%, rgba(184, 72, 117, 0.18) 0 13%, transparent 14%),
-          radial-gradient(circle at 50% 8%, rgba(255, 223, 235, 0.52) 0 26%, transparent 27%),
-          radial-gradient(circle at 92% 50%, rgba(255, 223, 235, 0.48) 0 26%, transparent 27%),
-          radial-gradient(circle at 50% 92%, rgba(255, 223, 235, 0.52) 0 26%, transparent 27%),
-          radial-gradient(circle at 8% 50%, rgba(255, 223, 235, 0.48) 0 26%, transparent 27%);
-        opacity: 0.88;
-      }
-
-      .section-number {
-        background: linear-gradient(135deg, #ffe8f1, #ffd3e5);
-        color: var(--primary-dark);
-        box-shadow: inset 0 0 0 1px rgba(199, 77, 133, 0.18), 0 10px 18px rgba(199, 77, 133, 0.12);
-      }
-
-      label {
-        color: #5c2745;
-      }
-
-      input[type="text"],
-      input[type="date"],
-      input[type="tel"],
-      input[type="email"],
-      input[type="number"],
-      input[type="file"],
-      select,
-      textarea {
-        background: rgba(255, 253, 254, 0.98);
-        border-color: rgba(191, 92, 138, 0.16);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.74);
-      }
-
-      input:hover,
-      select:hover,
-      textarea:hover {
-        border-color: rgba(199, 77, 133, 0.38);
-      }
-
-      input:focus,
-      select:focus,
-      textarea:focus {
-        border-color: rgba(199, 77, 133, 0.58);
-        box-shadow: 0 0 0 4px rgba(199, 77, 133, 0.12);
-      }
-
-      input[readonly] {
-        background: linear-gradient(180deg, #fff1f7, #fde7f0);
-        color: #86546d;
-      }
-
-      input[type="file"] {
-        background: rgba(255, 247, 251, 0.98);
-      }
-
-      input[type="file"]::file-selector-button {
-        background: #ffe1ec;
-        color: var(--primary-dark);
-      }
-
-      input[type="file"]::file-selector-button:hover {
-        background: #ffd3e4;
-      }
-
-      .fee-entry,
-      .installment-entry {
-        border-color: rgba(199, 77, 133, 0.16);
-        background: linear-gradient(180deg, rgba(255, 246, 250, 0.95), rgba(255, 236, 244, 0.9));
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
-      }
-
-      .add-btn {
-        background: linear-gradient(135deg, #ffe6f0, #ffd6e5);
-        color: var(--primary-dark);
-        box-shadow: 0 12px 24px rgba(199, 77, 133, 0.16);
-      }
-
-      #addMobileBtn {
-        background: linear-gradient(135deg, #f9e7ff, #ffd8eb);
-        color: #9a3867;
-      }
-
-      .remove-btn {
-        background: linear-gradient(135deg, #ffe8f0, #ffd4e2);
-        color: #bc4f78;
-        box-shadow: 0 10px 18px rgba(188, 79, 120, 0.14);
-      }
-
-      #calculateBtn {
-        background: linear-gradient(135deg, #ff9fc3, #d95a94);
-        box-shadow: 0 18px 34px rgba(201, 84, 136, 0.28);
-      }
-
-      #calculationArea {
-        border-color: rgba(199, 77, 133, 0.16);
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(255, 236, 244, 0.94));
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
-      }
-
-      #calculationArea .calc-total {
-        color: var(--primary-dark);
-      }
-
-      #calculationArea .calc-note,
-      .installment-note {
-        color: #805f71;
-      }
-
-      .terms-box {
-        border-color: rgba(191, 92, 138, 0.14);
-        background: linear-gradient(180deg, #fffdfd, #fff2f7);
-      }
-
-      .terms-box h3 {
-        border-bottom-color: rgba(199, 77, 133, 0.16);
-      }
-
-      .terms-box h4 {
-        color: #7c3159;
-      }
-
-      .terms-box h5 {
-        color: #9a5475;
-      }
-
-      .terms-box th,
-      .terms-box td {
-        border-color: rgba(173, 83, 124, 0.12);
-      }
-
-      .terms-box th {
-        background: #ffe7f0;
-      }
-
-      .terms-agree-group {
-        border-color: rgba(199, 77, 133, 0.16);
-        background: linear-gradient(90deg, #fff0f6, #ffe3ee);
-      }
-
-      #submitBtn {
-        background: linear-gradient(135deg, #c94e86, #8f2f60);
-        box-shadow: 0 18px 32px rgba(168, 61, 111, 0.28);
-      }
-
-      #downloadPdfBtn {
-        background: linear-gradient(135deg, #f58ab3, #d74e87);
-        box-shadow: 0 18px 32px rgba(215, 78, 135, 0.24);
-      }
-
-      #status {
-        border-color: rgba(199, 77, 133, 0.22);
-        background: rgba(255, 248, 251, 0.96);
-      }
-
-      #status.error {
-        border-color: rgba(188, 79, 120, 0.24);
-        color: #8f375d;
-      }
 
       body.modal-open {
         overflow: hidden;
@@ -1237,12 +871,16 @@
         padding: 14px 18px;
         border: none;
         border-radius: 18px;
-        background: linear-gradient(135deg, #c74d85, #8f2f60);
+        background: linear-gradient(135deg, #1e3a8a, #0f172a);
         color: #ffffff;
         font-size: 0.96rem;
         font-weight: 800;
         cursor: pointer;
-        box-shadow: 0 18px 32px rgba(143, 47, 96, 0.24);
+        box-shadow: 0 10px 20px rgba(15, 23, 42, 0.18);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
       }
 
       .fetch-enquiry-btn:hover,
@@ -1325,12 +963,17 @@
         min-height: 48px;
         border: none;
         border-radius: 16px;
-        background: rgba(255, 255, 255, 0.82);
+        background: #ffffff;
         color: var(--primary-dark);
         font-size: 1.45rem;
         font-weight: 800;
         cursor: pointer;
-        box-shadow: 0 14px 28px rgba(143, 47, 96, 0.12);
+        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.12);
+        transition: all 0.2s ease;
+      }
+      .enquiry-modal-close:hover {
+        background: #f1f5f9;
+        transform: scale(1.05);
       }
 
       .enquiry-modal-search {
@@ -1339,7 +982,7 @@
 
       .enquiry-modal-search input {
         border-radius: 18px;
-        background: rgba(255, 255, 255, 0.9);
+        background: rgba(255, 255, 255, 0.95);
       }
 
       .enquiry-modal-content {
@@ -1355,9 +998,9 @@
       .enquiry-loading,
       .enquiry-empty {
         padding: 18px 20px;
-        border: 1px solid rgba(199, 77, 133, 0.14);
+        border: 1px solid rgba(30, 64, 175, 0.14);
         border-radius: 20px;
-        background: rgba(255, 255, 255, 0.72);
+        background: #ffffff;
         color: var(--muted);
         font-weight: 700;
       }
@@ -1366,9 +1009,9 @@
         flex: 1 1 auto;
         min-height: 0;
         overflow: auto;
-        border: 1px solid rgba(199, 77, 133, 0.14);
+        border: 1px solid rgba(30, 64, 175, 0.14);
         border-radius: 22px;
-        background: rgba(255, 255, 255, 0.72);
+        background: #ffffff;
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
       }
 
@@ -1381,7 +1024,7 @@
       .enquiry-table th,
       .enquiry-table td {
         padding: 14px 16px;
-        border-bottom: 1px solid rgba(199, 77, 133, 0.12);
+        border-bottom: 1px solid rgba(15, 23, 42, 0.08);
         text-align: left;
         vertical-align: top;
       }
@@ -1389,17 +1032,18 @@
       .enquiry-table thead th {
         position: sticky;
         top: 0;
-        background: rgba(255, 241, 247, 0.94);
+        background: #f8fafc;
         color: var(--primary-dark);
         font-size: 0.85rem;
         font-weight: 800;
         letter-spacing: 0.05em;
         text-transform: uppercase;
         z-index: 1;
+        border-bottom: 2px solid rgba(30, 64, 175, 0.2);
       }
 
       .enquiry-table tbody tr:hover {
-        background: rgba(255, 232, 241, 0.5);
+        background: #f1f5f9;
       }
 
       .enquiry-table tbody tr:last-child td {
@@ -1412,7 +1056,7 @@
       }
 
       .enquiry-result-meta {
-        color: #805f71;
+        color: #475569;
         font-size: 0.88rem;
         font-weight: 800;
       }
@@ -1421,12 +1065,17 @@
         padding: 10px 16px;
         border: none;
         border-radius: 14px;
-        background: linear-gradient(135deg, #c74d85, #8f2f60);
+        background: linear-gradient(135deg, #1e40af, #0f172a);
         color: #ffffff;
         font-size: 0.92rem;
         font-weight: 800;
         cursor: pointer;
-        box-shadow: 0 14px 24px rgba(143, 47, 96, 0.18);
+        box-shadow: 0 10px 20px rgba(15, 23, 42, 0.18);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .enquiry-fetch-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 14px 26px rgba(15, 23, 42, 0.25);
       }
 
       @media (min-width: 760px) {
@@ -1540,13 +1189,18 @@
     </style>
   </head>
   <body>
-    <div class="floral-stage" aria-hidden="true">
-      <span class="flower flower-one"></span>
-      <span class="flower flower-two"></span>
-      <span class="flower flower-three"></span>
-      <span class="flower flower-four"></span>
-    </div>
     <div class="page-shell">
+      <nav class="portal-nav-bar" style="background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); padding: 12px 22px; border-radius: 18px; margin-bottom: 22px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid rgba(255,255,255,0.12); flex-wrap: wrap; box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <img src="/tpc-logo.png" alt="TPC" style="width: 28px; height: 28px; border-radius: 50%;" onerror="this.onerror=null; this.src='/tpc-logo.jpg';">
+          <span style="color: #f1f5f9; font-weight: 700; font-size: 0.92rem; letter-spacing: 0.02em;">THE PRIME CLASSES ERP</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <a href="/" style="color: #cbd5e1; font-size: 13px; font-weight: 600; text-decoration: none; padding: 7px 14px; border-radius: 10px; background: rgba(255,255,255,0.08); display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;">🏠 ERP Dashboard</a>
+          <a href="/enquiry-form" style="color: #cbd5e1; font-size: 13px; font-weight: 600; text-decoration: none; padding: 7px 14px; border-radius: 10px; background: rgba(255,255,255,0.08); display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;">📝 Enquiry Form</a>
+          <a href="https://prime-student-report.onrender.com" target="_blank" rel="noopener noreferrer" style="color: #ffffff; font-size: 13px; font-weight: 700; text-decoration: none; padding: 7px 16px; border-radius: 10px; background: linear-gradient(135deg, #d97706, #b45309); display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.35);">📊 Student Live Report</a>
+        </div>
+      </nav>
       <header class="hero-panel">
         <div class="hero-copy">
           <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;">

@@ -17,7 +17,11 @@ import {
   ChevronDown,
   ChevronUp,
   LayoutGrid,
-  Table as TableIcon
+  Table as TableIcon,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 
 export default function RecordsTable({
@@ -45,6 +49,24 @@ export default function RecordsTable({
 
   // Track expanded cards in mobile view
   const [expandedRows, setExpandedRows] = useState({});
+
+  // Pagination state (25 items per page by default to eliminate browser freeze)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
+  // Reset page when dataset or activeTab changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [rows, activeTab]);
+
+  const totalRecords = rows.length;
+  const isAll = pageSize === 'all';
+  const effectivePageSize = isAll ? Math.max(1, totalRecords) : Number(pageSize);
+  const totalPages = Math.max(1, Math.ceil(totalRecords / effectivePageSize));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (safeCurrentPage - 1) * effectivePageSize;
+  const endIndex = Math.min(startIndex + effectivePageSize, totalRecords);
+  const paginatedRows = isAll ? rows : rows.slice(startIndex, endIndex);
 
   const toggleExpandRow = (rowNum) => {
     setExpandedRows((prev) => ({
@@ -211,7 +233,7 @@ export default function RecordsTable({
            MOBILE CARD VIEW: Touch-Friendly, Clean, Full Student Data Visible
            ====================================================================== */
         <div className="mobile-cards-list">
-          {rows.map((row) => {
+          {paginatedRows.map((row) => {
             const rowNum = row.rowNumber;
             const values = row.values || [];
             const voucherStatus = row.voucherStatus || 'Not Given';
@@ -422,7 +444,7 @@ export default function RecordsTable({
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => {
+              {paginatedRows.map((row) => {
                 const rowNum = row.rowNumber;
                 const values = row.values || [];
                 const voucherStatus = row.voucherStatus || 'Not Given';
@@ -552,6 +574,77 @@ export default function RecordsTable({
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Modern High-Performance Pagination Toolbar */}
+      {!isLoading && totalRecords > 0 && (
+        <div className="table-pagination-bar">
+          <div className="pagination-info">
+            Showing <strong>{totalRecords === 0 ? 0 : startIndex + 1}</strong> - <strong>{endIndex}</strong> of <strong>{totalRecords}</strong> records
+          </div>
+
+          <div className="pagination-controls">
+            <div className="page-size-selector">
+              <label>Rows per page:</label>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(e.target.value === 'all' ? 'all' : Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+              >
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value="all">All ({totalRecords})</option>
+              </select>
+            </div>
+
+            {!isAll && totalPages > 1 && (
+              <div className="page-nav-buttons">
+                <button
+                  type="button"
+                  className="page-btn"
+                  disabled={safeCurrentPage <= 1}
+                  onClick={() => setCurrentPage(1)}
+                  title="First Page"
+                >
+                  <ChevronsLeft size={14} />
+                </button>
+                <button
+                  type="button"
+                  className="page-btn"
+                  disabled={safeCurrentPage <= 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  title="Previous Page"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                <span className="page-indicator">
+                  Page <strong>{safeCurrentPage}</strong> of <strong>{totalPages}</strong>
+                </span>
+                <button
+                  type="button"
+                  className="page-btn"
+                  disabled={safeCurrentPage >= totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  title="Next Page"
+                >
+                  <ChevronRight size={14} />
+                </button>
+                <button
+                  type="button"
+                  className="page-btn"
+                  disabled={safeCurrentPage >= totalPages}
+                  onClick={() => setCurrentPage(totalPages)}
+                  title="Last Page"
+                >
+                  <ChevronsRight size={14} />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

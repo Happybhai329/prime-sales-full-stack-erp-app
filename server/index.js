@@ -18,6 +18,10 @@ import {
   generateVoucherPdfBuffer,
   generateRecordPdfBuffer
 } from './voucherGenerator.js';
+import {
+  sendEnquiryWelcomeEmail,
+  sendAdmissionConfirmationEmail
+} from './mailer.js';
 
 dotenv.config();
 
@@ -28,8 +32,8 @@ const app = express();
 const PORT = process.env.PORT || 10000;
 
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Helper to get cached headers from prime_sync_meta
 async function getCachedHeaders(sheetKey) {
@@ -854,7 +858,14 @@ app.post('/api/enquiry-form/submit', async (req, res) => {
     // Insert locally into database immediately
     await query(
       `INSERT INTO prime_inquiries (row_number, student_name, father_name, mobile, program, inquiry_date, raw_values)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (row_number) DO UPDATE SET
+        student_name = EXCLUDED.student_name,
+        father_name = EXCLUDED.father_name,
+        mobile = EXCLUDED.mobile,
+        program = EXCLUDED.program,
+        inquiry_date = EXCLUDED.inquiry_date,
+        raw_values = EXCLUDED.raw_values`,
       [
         nextRow,
         name,
@@ -866,9 +877,16 @@ app.post('/api/enquiry-form/submit', async (req, res) => {
       ]
     );
 
-    // Append to remote Google Sheets asynchronously
+    // Send authentic Welcome Email in background
+    if (data.email) {
+      sendEnquiryWelcomeEmail(data.email, name).catch((mailErr) => {
+        console.warn('[Enquiry] Welcome email warning:', mailErr.message);
+      });
+    }
+
+    // Append to remote Google Sheets asynchronously (safe error isolation)
     sheets.appendEnquiry(rowValues).catch((err) => {
-      console.error('[GoogleSheets] Append enquiry error:', err.message);
+      console.warn('[GoogleSheets] Append enquiry warning:', err.message);
     });
 
     res.json({
@@ -937,13 +955,17 @@ app.post('/api/admission-form/submit', async (req, res) => {
       'Start Session': formData.startSession || '',
       'End Session': formData.endSession || '',
       'Date of Application': formData.applicationDate || new Date().toISOString().split('T')[0],
+      'Application Date': formData.applicationDate || new Date().toISOString().split('T')[0],
       'Student Name': studentName,
       "Father's Name": fatherName,
+      'Father Name': fatherName,
       'DOB': formData.dob || '',
       'Mobile Numbers': mobileNumbersStr,
+      'Mobile Number': mobileNumbersStr,
       'Email': parentEmail,
       'Parent Email': parentEmail,
       "Mother's Name": formData.motherName || '',
+      'Mother Name': formData.motherName || '',
       'Category': formData.caste || '',
       'Caste': formData.caste || '',
       "Father's Occupation": formData.fatherOccupation || '',
@@ -965,7 +987,14 @@ app.post('/api/admission-form/submit', async (req, res) => {
       'Terms Agreement': formData.termsAgreement || 'Agreed',
       'Advance Check': formData.advanceCheck || '',
       'VoucherStatus': 'Not Given',
-      'VoucherPDFLink': ''
+      'VoucherPDFLink': '',
+      'Student Photo': '',
+      'Aadhaar Card': '',
+      'Aadhaar': '',
+      'DOB Certificate': '',
+      'Domicile': '',
+      'Caste Certificate': '',
+      'Service Certificate': ''
     };
 
     const rowValues = admissionHeaders.map((h) => valuesByHeader[h] != null ? valuesByHeader[h] : '');
@@ -978,7 +1007,27 @@ app.post('/api/admission-form/submit', async (req, res) => {
         other_fees_json, total_amount, discount_percent, scholarship_amount,
         gst_percent, final_cost, installment_details_json, voucher_status,
         voucher_pdf_link, raw_values
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+      ON CONFLICT (row_number) DO UPDATE SET
+        student_name = EXCLUDED.student_name,
+        father_name = EXCLUDED.father_name,
+        program = EXCLUDED.program,
+        admission_date = EXCLUDED.admission_date,
+        start_session = EXCLUDED.start_session,
+        end_session = EXCLUDED.end_session,
+        mobile = EXCLUDED.mobile,
+        registration_fee = EXCLUDED.registration_fee,
+        tuition_fee = EXCLUDED.tuition_fee,
+        other_fees_json = EXCLUDED.other_fees_json,
+        total_amount = EXCLUDED.total_amount,
+        discount_percent = EXCLUDED.discount_percent,
+        scholarship_amount = EXCLUDED.scholarship_amount,
+        gst_percent = EXCLUDED.gst_percent,
+        final_cost = EXCLUDED.final_cost,
+        installment_details_json = EXCLUDED.installment_details_json,
+        voucher_status = EXCLUDED.voucher_status,
+        voucher_pdf_link = EXCLUDED.voucher_pdf_link,
+        raw_values = EXCLUDED.raw_values`,
       [
         nextRow,
         studentName,
@@ -1003,16 +1052,55 @@ app.post('/api/admission-form/submit', async (req, res) => {
       ]
     );
 
-    // Append to remote Google Sheets asynchronously
-    sheets.appendAdmission(rowValues).catch((err) => {
-      console.error('[GoogleSheets] Append admission error:', err.message);
-    });
+    // Send authentic Admission Confirmation Email in background
+    if (parentEmail) {
+      sendAdmissionConfirmationEmail(parentEmail, {
+        studentName,
+        studentId: candidateId,
+        className: studentClass,
+        program: formData.program
+      }).catch((mailErr) => {
+        console.warn('[Admission] Confirmation email warning:', mailErr.message);
+      });
+    }
+
+    // Async process: Upload student files to Google Drive, update row & Google Sheets
+    (async () => {
+      try {
+        let updatedRowValues = [...rowValues];
+        if (filesData && Object.keys(filesData).length > 0) {
+          const fileUrls = await sheets.uploadStudentFiles(studentName, candidateId, filesData);
+          if (fileUrls.photo) valuesByHeader['Student Photo'] = fileUrls.photo;
+          if (fileUrls.aadhaar) {
+            valuesByHeader['Aadhaar Card'] = fileUrls.aadhaar;
+            valuesByHeader['Aadhaar'] = fileUrls.aadhaar;
+          }
+          if (fileUrls.dobCert) valuesByHeader['DOB Certificate'] = fileUrls.dobCert;
+          if (fileUrls.domicile) valuesByHeader['Domicile'] = fileUrls.domicile;
+          if (fileUrls.casteCert) valuesByHeader['Caste Certificate'] = fileUrls.casteCert;
+          if (fileUrls.serviceCert) valuesByHeader['Service Certificate'] = fileUrls.serviceCert;
+
+          updatedRowValues = admissionHeaders.map((h) => valuesByHeader[h] != null ? valuesByHeader[h] : '');
+          await query('UPDATE prime_admissions SET raw_values = $1 WHERE row_number = $2', [
+            JSON.stringify(updatedRowValues),
+            nextRow
+          ]);
+        }
+
+        // Append to remote Google Sheets
+        await sheets.appendAdmission(updatedRowValues);
+        console.log(`[GoogleSheets] Appended admission for ${candidateId} (${studentName})`);
+      } catch (asyncErr) {
+        console.warn('[Admission] Background Drive/Sheets task warning:', asyncErr.message);
+      }
+    })();
 
     res.json({
       status: 'success',
       success: true,
       studentId: candidateId,
       pdfUrl: `/api/admission-form/pdf/${candidateId}`,
+      emailSent: Boolean(parentEmail),
       message: `Admission Submitted Successfully! Student ID: ${candidateId}`
     });
   } catch (err) {
@@ -1035,8 +1123,14 @@ app.get('/api/admission-form/pdf/:studentId', async (req, res) => {
     }
 
     const headers = await getCachedHeaders('admissions');
-    const voucherData = buildVoucherData(headers, admRes.rows[0].raw_values, admRes.rows[0].row_number);
-    const pdfBuffer = await generateRecordPdfBuffer(voucherData);
+    const rawVal = admRes.rows[0].raw_values;
+    const values = Array.isArray(rawVal)
+      ? rawVal
+      : typeof rawVal === 'string'
+        ? JSON.parse(rawVal)
+        : [];
+
+    const pdfBuffer = await generateRecordPdfBuffer('ADMISSIONS', headers, values);
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(

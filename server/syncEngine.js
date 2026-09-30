@@ -219,8 +219,7 @@ export async function triggerSync() {
       );
     }
 
-    // 3. Ingest Inquiries in batches
-    await query('DELETE FROM prime_inquiries');
+    // 3. Ingest Inquiries in batches (Non-destructive UPSERT preserving local submissions)
     const inqHeaders = inquiriesData.headers;
     const inquiryInsertRows = inquiriesData.rows.map((row) => {
       const studentName = String(
@@ -275,11 +274,17 @@ export async function triggerSync() {
         'inquiry_date',
         'raw_values'
       ],
-      inquiryInsertRows
+      inquiryInsertRows,
+      `ON CONFLICT (row_number) DO UPDATE SET
+        student_name = EXCLUDED.student_name,
+        father_name = EXCLUDED.father_name,
+        mobile = EXCLUDED.mobile,
+        program = EXCLUDED.program,
+        inquiry_date = EXCLUDED.inquiry_date,
+        raw_values = EXCLUDED.raw_values`
     );
 
-    // 4. Ingest Admissions in batches
-    await query('DELETE FROM prime_admissions');
+    // 4. Ingest Admissions in batches (Non-destructive UPSERT preserving local submissions)
     const admHeaders = admissionsData.headers;
     const admissionInsertRows = admissionsData.rows.map((row) => {
       const studentName = String(
@@ -386,7 +391,27 @@ export async function triggerSync() {
         'voucher_pdf_link',
         'raw_values'
       ],
-      admissionInsertRows
+      admissionInsertRows,
+      `ON CONFLICT (row_number) DO UPDATE SET
+        student_name = EXCLUDED.student_name,
+        father_name = EXCLUDED.father_name,
+        program = EXCLUDED.program,
+        admission_date = EXCLUDED.admission_date,
+        start_session = EXCLUDED.start_session,
+        end_session = EXCLUDED.end_session,
+        mobile = EXCLUDED.mobile,
+        registration_fee = EXCLUDED.registration_fee,
+        tuition_fee = EXCLUDED.tuition_fee,
+        other_fees_json = EXCLUDED.other_fees_json,
+        total_amount = EXCLUDED.total_amount,
+        discount_percent = EXCLUDED.discount_percent,
+        scholarship_amount = EXCLUDED.scholarship_amount,
+        gst_percent = EXCLUDED.gst_percent,
+        final_cost = EXCLUDED.final_cost,
+        installment_details_json = EXCLUDED.installment_details_json,
+        voucher_status = COALESCE(prime_admissions.voucher_status, EXCLUDED.voucher_status),
+        voucher_pdf_link = COALESCE(prime_admissions.voucher_pdf_link, EXCLUDED.voucher_pdf_link),
+        raw_values = EXCLUDED.raw_values`
     );
 
     // 5. Ingest Cancelled in batches
