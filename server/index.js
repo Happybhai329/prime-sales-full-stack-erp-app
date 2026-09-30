@@ -807,11 +807,22 @@ app.get('/api/public/fee-types', async (req, res) => {
 // Public Enquiries list (for Admission Form "Fetch from Enquiry" modal)
 app.get('/api/public/enquiries', async (req, res) => {
   try {
-    const dbRes = await query('SELECT row_number, student_name, father_name, mobile, program, raw_values FROM prime_inquiries ORDER BY row_number DESC LIMIT 600');
-    const headers = await getCachedHeaders('inquiries');
+    const dbRes = await query(
+      'SELECT row_number, student_name, father_name, mobile, program, raw_values FROM prime_inquiries ORDER BY row_number DESC LIMIT 600'
+    );
+    const cachedHeaders = await getCachedHeaders('inquiries');
+    const headers = cachedHeaders && cachedHeaders.length > 0 ? cachedHeaders : [
+      'Timestamp', 'S.No.', 'Date', 'Student Name', 'Class', 'Date of Birth',
+      'Category', 'Father Name', 'Father No.', 'Parent Email', 'Mother Name', 'Mother No.',
+      'Father Occupation', 'Complete Address', 'Present School', 'Prime Feedback',
+      'Source', 'Discount (Scholarship)', 'Notes'
+    ];
     
     const records = dbRes.rows.map((row) => {
-      const vals = row.raw_values || [];
+      const vals = Array.isArray(row.raw_values)
+        ? row.raw_values
+        : (typeof row.raw_values === 'string' ? JSON.parse(row.raw_values || '[]') : []);
+
       const getValue = (h) => {
         const idx = headers.indexOf(h);
         return idx !== -1 && vals[idx] != null ? String(vals[idx]).trim() : '';
