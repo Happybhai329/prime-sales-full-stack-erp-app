@@ -35,6 +35,41 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// ==============================================================================
+// HEALTH CHECK ROUTES (For UptimeRobot, Render Liveness, & Heartbeats)
+// ==============================================================================
+app.get(['/health', '/api/health', '/ping'], async (req, res) => {
+  if (req.query.deep === '1') {
+    try {
+      await query('SELECT 1');
+      return res.status(200).json({
+        status: 'ok',
+        database: 'connected',
+        service: 'The Prime Classes ERP Backend',
+        uptimeSeconds: Math.floor(process.uptime()),
+        timestamp: new Date().toISOString()
+      });
+    } catch (err) {
+      return res.status(503).json({
+        status: 'degraded',
+        database: 'error: ' + err.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  res.status(200).json({
+    status: 'ok',
+    service: 'The Prime Classes ERP Backend',
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.head(['/health', '/api/health', '/ping'], (req, res) => {
+  res.status(200).end();
+});
+
 // Helper to get cached headers from prime_sync_meta
 async function getCachedHeaders(sheetKey) {
   try {
