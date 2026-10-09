@@ -125,7 +125,8 @@ app.get('/api/dashboard', async (req, res) => {
     const programs = progRes.rows.map((r) => r.program_name);
     const feeTypes = feeRes.rows.map((r) => ({
       feeType: r.fee_type,
-      amount: parseFloat(r.amount || 0)
+      amount: parseFloat(r.amount || 0),
+      fees: parseFloat(r.amount || 0)
     }));
 
     res.json({
@@ -794,12 +795,63 @@ app.get('/api/public/programs', async (req, res) => {
 app.get('/api/public/fee-types', async (req, res) => {
   try {
     const dbRes = await query('SELECT fee_type, amount FROM prime_fee_types ORDER BY fee_type ASC');
-    let feeTypes = dbRes.rows.map((r) => ({
+    let feeTypes = (dbRes && dbRes.rows ? dbRes.rows : []).map((r) => ({
       feeType: r.fee_type,
-      amount: parseFloat(r.amount || 0)
+      amount: parseFloat(r.amount || 0),
+      fees: parseFloat(r.amount || 0)
     }));
+
+    // Fallback: If DB table is empty, fetch live from Google Sheets
+    if (feeTypes.length === 0) {
+      try {
+        const remote = await sheets.fetchRemoteFeeTypes();
+        if (remote && remote.rows && remote.rows.length > 0) {
+          const feeMap = new Map();
+          remote.rows.forEach((r) => {
+            const type = String(r.values[0] || '').trim();
+            const amt = parseFloat(r.values[1] || 0) || 0;
+            if (type && !feeMap.has(type)) {
+              feeMap.set(type, amt);
+            }
+          });
+          feeTypes = Array.from(feeMap.entries()).map(([feeType, amount]) => ({
+            feeType,
+            amount,
+            fees: amount
+          }));
+
+          // Persist in background to database
+          for (const item of feeTypes) {
+            query(
+              'INSERT INTO prime_fee_types (fee_type, amount) VALUES ($1, $2) ON CONFLICT (fee_type) DO UPDATE SET amount = EXCLUDED.amount',
+              [item.feeType, item.amount]
+            ).catch(() => {});
+          }
+        }
+      } catch (remoteErr) {
+        console.warn('[FeeTypes Remote Fallback Warning]', remoteErr.message);
+      }
+    }
+
     res.json({ success: true, data: feeTypes });
   } catch (err) {
+    try {
+      const remote = await sheets.fetchRemoteFeeTypes();
+      if (remote && remote.rows && remote.rows.length > 0) {
+        const feeMap = new Map();
+        remote.rows.forEach((r) => {
+          const type = String(r.values[0] || '').trim();
+          const amt = parseFloat(r.values[1] || 0) || 0;
+          if (type && !feeMap.has(type)) feeMap.set(type, amt);
+        });
+        const feeTypes = Array.from(feeMap.entries()).map(([feeType, amount]) => ({
+          feeType,
+          amount,
+          fees: amount
+        }));
+        return res.json({ success: true, data: feeTypes });
+      }
+    } catch (e) {}
     res.json({ success: true, data: [] });
   }
 });

@@ -2075,6 +2075,47 @@
       }
       
       // === LOAD FEE TYPES FROM SPREADSHEET ===
+      function buildFeeOptionsHtml(selectedType = '') {
+        let feeOptions = '<option value="" disabled ' + (!selectedType ? 'selected' : '') + '>Select fee type...</option>';
+        if (feeTypesData && feeTypesData.length > 0) {
+          feeTypesData.forEach(fee => {
+            const typeName = fee.feeType || fee.feestype || '';
+            const rawAmt = fee.amount !== undefined && fee.amount !== null && fee.amount !== ''
+              ? fee.amount
+              : (fee.fees !== undefined && fee.fees !== null && fee.fees !== '' ? fee.fees : 0);
+            const num = parseFloat(rawAmt) || 0;
+            const isSel = selectedType && selectedType === typeName ? 'selected' : '';
+            feeOptions += `<option value="${typeName}" data-amount="${num.toFixed(2)}" ${isSel}>${typeName}</option>`;
+          });
+        } else {
+          feeOptions += '<option value="" disabled>Loading fee types...</option>';
+        }
+        return feeOptions;
+      }
+
+      function refreshAllFeeTypeSelects() {
+        const feeEntries = document.querySelectorAll('.fee-entry');
+        feeEntries.forEach(entry => {
+          const select = entry.querySelector('.fee-type');
+          const amountInput = entry.querySelector('.fee-amount');
+          if (select) {
+            const currentVal = select.value;
+            select.innerHTML = buildFeeOptionsHtml(currentVal);
+            if (currentVal) {
+              select.value = currentVal;
+            }
+            if (select.value && amountInput && (!amountInput.value || parseFloat(amountInput.value) === 0)) {
+              const opt = select.options[select.selectedIndex];
+              const amt = opt ? opt.getAttribute('data-amount') : null;
+              if (amt && !isNaN(parseFloat(amt))) {
+                amountInput.value = parseFloat(amt).toFixed(2);
+                calculateTotal();
+              }
+            }
+          }
+        });
+      }
+
       async function loadFeeTypes() {
         console.log('loadFeeTypes: Starting...');
         try {
@@ -2083,6 +2124,7 @@
           if (parsedResponse && parsedResponse.success && Array.isArray(parsedResponse.data)) {
             feeTypesData = parsedResponse.data;
             console.log('loadFeeTypes: Loaded fee types data:', feeTypesData);
+            refreshAllFeeTypeSelects();
           }
         } catch (error) {
           console.error('Failed to load fee types:', error);
@@ -2734,14 +2776,7 @@
         newFeeEntry.className = 'fee-entry';
         
         // Create dropdown options from feeTypesData
-        let feeOptions = '<option value="" disabled selected>Select fee type...</option>';
-        if (feeTypesData.length > 0) {
-          feeTypesData.forEach(fee => {
-            feeOptions += `<option value="${fee.feeType}" data-amount="${fee.fees}">${fee.feeType}</option>`;
-          });
-        } else {
-          feeOptions += '<option value="" disabled>Loading fee types...</option>';
-        }
+        const feeOptions = buildFeeOptionsHtml();
         
         newFeeEntry.innerHTML = `
           <select class="fee-type" required>
@@ -2758,12 +2793,28 @@
         };
         
         // Add listener to fee type dropdown to auto-fill amount
-        newFeeEntry.querySelector('.fee-type').addEventListener('change', function() {
+        const feeSelect = newFeeEntry.querySelector('.fee-type');
+        const amountInput = newFeeEntry.querySelector('.fee-amount');
+
+        feeSelect.addEventListener('change', function() {
           const selectedOption = this.options[this.selectedIndex];
-          const amount = selectedOption.getAttribute('data-amount');
-          const amountInput = newFeeEntry.querySelector('.fee-amount');
-          if (amount && amount !== 'null') {
-            amountInput.value = parseFloat(amount).toFixed(2);
+          let amount = selectedOption ? selectedOption.getAttribute('data-amount') : null;
+
+          // Secondary fallback: lookup in feeTypesData directly
+          if (!amount || amount === 'null' || amount === 'undefined') {
+            const matched = (feeTypesData || []).find(f => (f.feeType || f.feestype) === this.value);
+            if (matched) {
+              amount = matched.amount !== undefined && matched.amount !== null ? matched.amount : matched.fees;
+            }
+          }
+
+          if (amount !== null && amount !== undefined && amount !== '' && amount !== 'null' && amount !== 'undefined') {
+            const num = parseFloat(amount);
+            if (!isNaN(num)) {
+              amountInput.value = num.toFixed(2);
+            } else {
+              amountInput.value = '';
+            }
           } else {
             amountInput.value = '';
           }
@@ -2771,7 +2822,7 @@
         });
         
         // Add listener to the new amount field to auto-calculate
-        newFeeEntry.querySelector('.fee-amount').addEventListener('input', calculateTotal);
+        amountInput.addEventListener('input', calculateTotal);
         
         container.appendChild(newFeeEntry);
       });

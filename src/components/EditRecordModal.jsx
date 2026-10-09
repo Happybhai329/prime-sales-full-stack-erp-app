@@ -80,6 +80,17 @@ export default function EditRecordModal({
     setOtherFeesRows((prev) => {
       const updated = [...prev];
       updated[index][field] = value;
+      if (field === 'feeType' && value) {
+        const matched = (feeTypes || []).find(
+          (f) => (f.feeType || f.feestype)?.toLowerCase() === value.trim().toLowerCase()
+        );
+        if (matched && (!updated[index].amount || updated[index].amount === '')) {
+          const matchedAmt = matched.amount !== undefined && matched.amount !== null ? matched.amount : matched.fees;
+          if (matchedAmt !== undefined && matchedAmt !== null && !isNaN(parseFloat(matchedAmt))) {
+            updated[index].amount = parseFloat(matchedAmt).toFixed(2);
+          }
+        }
+      }
       return updated;
     });
   };
