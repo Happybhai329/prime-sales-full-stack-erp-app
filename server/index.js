@@ -297,10 +297,20 @@ app.get('/api/records', async (req, res) => {
       };
     });
 
+    const totalCount = formattedRows.length;
+    let paginatedRows = formattedRows;
+
+    const limitParam = req.query.limit ? parseInt(req.query.limit, 10) : null;
+    const offsetParam = req.query.offset ? Math.max(0, parseInt(req.query.offset, 10)) : 0;
+
+    if (limitParam && limitParam > 0) {
+      paginatedRows = formattedRows.slice(offsetParam, offsetParam + limitParam);
+    }
+
     res.json({
       headers,
-      rows: formattedRows,
-      totalCount: formattedRows.length
+      rows: paginatedRows,
+      totalCount
     });
   } catch (err) {
     console.error('Error in /api/records:', err);
@@ -1238,6 +1248,371 @@ app.get('/api/admission-form/pdf/:studentId', async (req, res) => {
     res.send(pdfBuffer);
   } catch (err) {
     console.error('Error generating admission PDF:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ==============================================================================
+// 8.5. SALES MANAGEMENT API (PAGINATED & INDEXED QUOTA/EGRESS SAFE)
+// ==============================================================================
+
+// GET /api/sales/reps - Fetch sales staff from central employees table
+app.get('/api/sales/reps', async (req, res) => {
+  try {
+    let empRes = await query(
+      `SELECT id, emp_id AS employee_id, name, department, role, status
+       FROM employees
+       WHERE department ILIKE '%sales%' OR role ILIKE '%sales%' OR role ILIKE '%telecaller%'
+       ORDER BY name ASC
+       LIMIT 100`
+    );
+    if (!empRes.rows || empRes.rows.length === 0) {
+      empRes = await query(
+        `SELECT id, emp_id AS employee_id, name, department, role, status
+         FROM employees
+         ORDER BY name ASC
+         LIMIT 100`
+      );
+    }
+    res.json({ success: true, reps: empRes.rows });
+  } catch (err) {
+    res.json({ success: true, reps: [] });
+  }
+});
+
+// GET /api/sales/leads - Paginated Leads with Egress & Quota Protection
+app.get('/api/sales/leads', async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 25));
+    const offset = req.query.offset !== undefined ? Math.max(0, parseInt(req.query.offset, 10)) : (page - 1) * limit;
+
+    const status = String(req.query.status || '').trim();
+    const assignedTo = String(req.query.assigned_to || '').trim();
+    const employeeId = String(req.query.employee_id || '').trim();
+    const fromDate = String(req.query.from || '').trim();
+    const toDate = String(req.query.to || '').trim();
+    const search = String(req.query.search || '').trim().toLowerCase();
+
+    const where = [];
+    const params = [];
+
+    if (status && status !== 'all') {
+      params.push(status);
+      where.push(`status = $${params.length}`);
+    }
+    if (assignedTo && assignedTo !== 'all') {
+      params.push(assignedTo);
+      where.push(`assigned_to = $${params.length}`);
+    }
+    if (employeeId && employeeId !== 'all') {
+      params.push(employeeId);
+      where.push(`employee_id = $${params.length}`);
+    }
+    if (fromDate) {
+      params.push(`${fromDate}T00:00:00.000Z`);
+      where.push(`created_at >= $${params.length}`);
+    }
+    if (toDate) {
+      params.push(`${toDate}T23:59:59.999Z`);
+      where.push(`created_at <= $${params.length}`);
+    }
+    if (search) {
+      params.push(`%${search}%`);
+      where.push(`(student_name ILIKE $${params.length} OR mobile ILIKE $${params.length} OR parent_name ILIKE $${params.length})`);
+    }
+
+    const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+
+    const countRes = await query(`SELECT COUNT(*) as total FROM sales_leads ${whereClause}`, params);
+    const total = parseInt(countRes.rows[0]?.total || 0, 10);
+
+    const queryParams = [...params, limit, offset];
+    const limitIdx = queryParams.length - 1;
+    const offsetIdx = queryParams.length;
+
+    const rowsRes = await query(
+      `SELECT * FROM sales_leads ${whereClause} ORDER BY created_at DESC LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+      queryParams
+    );
+
+    res.json({
+      success: true,
+      data: rowsRes.rows,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (err) {
+    console.error('Error fetching sales leads:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/sales/leads - Create Lead & Log
+app.post('/api/sales/leads', async (req, res) => {
+  try {
+    const {
+      student_name, parent_name, mobile, email, program,
+      lead_source, status = 'New', assigned_to, employee_id,
+      expected_amount = 0, notes, raw_values
+    } = req.body;
+
+    const insertRes = await query(
+      `INSERT INTO sales_leads
+       (student_name, parent_name, mobile, email, program, lead_source, status, assigned_to, employee_id, expected_amount, notes, raw_values)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       RETURNING *`,
+      [
+        student_name, parent_name, mobile, email, program,
+        lead_source, status, assigned_to, employee_id,
+        expected_amount, notes, raw_values ? JSON.stringify(raw_values) : null
+      ]
+    );
+
+    const lead = insertRes.rows[0];
+
+    // Log action
+    query(
+      `INSERT INTO sales_logs (action, lead_id, employee_id, assigned_to, status, details)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      ['CREATE_LEAD', lead.id, employee_id, assigned_to, status, `Created lead for ${student_name || 'student'}`]
+    ).catch(() => {});
+
+    res.json({ success: true, lead });
+  } catch (err) {
+    console.error('Error creating sales lead:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/sales/deals - Paginated Deals with Egress & Quota Protection
+app.get('/api/sales/deals', async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 25));
+    const offset = req.query.offset !== undefined ? Math.max(0, parseInt(req.query.offset, 10)) : (page - 1) * limit;
+
+    const status = String(req.query.status || '').trim();
+    const stage = String(req.query.stage || '').trim();
+    const assignedTo = String(req.query.assigned_to || '').trim();
+    const employeeId = String(req.query.employee_id || '').trim();
+
+    const where = [];
+    const params = [];
+
+    if (status && status !== 'all') {
+      params.push(status);
+      where.push(`status = $${params.length}`);
+    }
+    if (stage && stage !== 'all') {
+      params.push(stage);
+      where.push(`stage = $${params.length}`);
+    }
+    if (assignedTo && assignedTo !== 'all') {
+      params.push(assignedTo);
+      where.push(`assigned_to = $${params.length}`);
+    }
+    if (employeeId && employeeId !== 'all') {
+      params.push(employeeId);
+      where.push(`employee_id = $${params.length}`);
+    }
+
+    const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+
+    const countRes = await query(`SELECT COUNT(*) as total FROM sales_deals ${whereClause}`, params);
+    const total = parseInt(countRes.rows[0]?.total || 0, 10);
+
+    const queryParams = [...params, limit, offset];
+    const limitIdx = queryParams.length - 1;
+    const offsetIdx = queryParams.length;
+
+    const rowsRes = await query(
+      `SELECT * FROM sales_deals ${whereClause} ORDER BY created_at DESC LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+      queryParams
+    );
+
+    res.json({
+      success: true,
+      data: rowsRes.rows,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (err) {
+    console.error('Error fetching sales deals:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/sales/deals - Create Deal & Log
+app.post('/api/sales/deals', async (req, res) => {
+  try {
+    const {
+      lead_id, student_name, program, deal_value = 0,
+      discount_amount = 0, final_amount = 0, status = 'Open',
+      stage = 'Proposal', closed_date, assigned_to, employee_id, raw_values
+    } = req.body;
+
+    const insertRes = await query(
+      `INSERT INTO sales_deals
+       (lead_id, student_name, program, deal_value, discount_amount, final_amount, status, stage, closed_date, assigned_to, employee_id, raw_values)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       RETURNING *`,
+      [
+        lead_id, student_name, program, deal_value,
+        discount_amount, final_amount, status, stage,
+        closed_date, assigned_to, employee_id,
+        raw_values ? JSON.stringify(raw_values) : null
+      ]
+    );
+
+    const deal = insertRes.rows[0];
+
+    query(
+      `INSERT INTO sales_logs (action, deal_id, employee_id, assigned_to, status, details)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      ['CREATE_DEAL', deal.id, employee_id, assigned_to, status, `Created deal ₹${final_amount} for ${student_name}`]
+    ).catch(() => {});
+
+    res.json({ success: true, deal });
+  } catch (err) {
+    console.error('Error creating sales deal:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/sales/targets - Target Tracking
+app.get('/api/sales/targets', async (req, res) => {
+  try {
+    const employeeId = String(req.query.employee_id || '').trim();
+    const month = String(req.query.month || '').trim();
+    const status = String(req.query.status || 'Active').trim();
+
+    const where = [];
+    const params = [];
+
+    if (employeeId) {
+      params.push(employeeId);
+      where.push(`employee_id = $${params.length}`);
+    }
+    if (month) {
+      params.push(month);
+      where.push(`month = $${params.length}`);
+    }
+    if (status && status !== 'all') {
+      params.push(status);
+      where.push(`status = $${params.length}`);
+    }
+
+    const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+    const resRows = await query(
+      `SELECT * FROM sales_targets ${whereClause} ORDER BY month DESC, employee_id ASC LIMIT 100`,
+      params
+    );
+
+    res.json({ success: true, targets: resRows.rows });
+  } catch (err) {
+    console.error('Error fetching sales targets:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/sales/targets - Set or Update Monthly Target
+app.post('/api/sales/targets', async (req, res) => {
+  try {
+    const {
+      employee_id, employee_name, month,
+      target_admissions = 0, target_amount = 0,
+      achieved_admissions = 0, achieved_amount = 0,
+      status = 'Active'
+    } = req.body;
+
+    if (!employee_id || !month) {
+      return res.status(400).json({ success: false, message: 'employee_id and month are required' });
+    }
+
+    const upsertRes = await query(
+      `INSERT INTO sales_targets
+       (employee_id, employee_name, month, target_admissions, target_amount, achieved_admissions, achieved_amount, status, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)
+       ON CONFLICT (employee_id, month) DO UPDATE SET
+         target_admissions = EXCLUDED.target_admissions,
+         target_amount = EXCLUDED.target_amount,
+         achieved_admissions = EXCLUDED.achieved_admissions,
+         achieved_amount = EXCLUDED.achieved_amount,
+         employee_name = COALESCE(EXCLUDED.employee_name, sales_targets.employee_name),
+         status = EXCLUDED.status,
+         updated_at = CURRENT_TIMESTAMP
+       RETURNING *`,
+      [
+        employee_id, employee_name, month,
+        target_admissions, target_amount,
+        achieved_admissions, achieved_amount,
+        status
+      ]
+    );
+
+    res.json({ success: true, target: upsertRes.rows[0] });
+  } catch (err) {
+    console.error('Error setting sales target:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/sales/logs - Paginated Audit Activity Logs
+app.get('/api/sales/logs', async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 30));
+    const offset = (page - 1) * limit;
+
+    const employeeId = String(req.query.employee_id || '').trim();
+    const assignedTo = String(req.query.assigned_to || '').trim();
+    const status = String(req.query.status || '').trim();
+
+    const where = [];
+    const params = [];
+
+    if (employeeId) {
+      params.push(employeeId);
+      where.push(`employee_id = $${params.length}`);
+    }
+    if (assignedTo) {
+      params.push(assignedTo);
+      where.push(`assigned_to = $${params.length}`);
+    }
+    if (status) {
+      params.push(status);
+      where.push(`status = $${params.length}`);
+    }
+
+    const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+    const countRes = await query(`SELECT COUNT(*) as total FROM sales_logs ${whereClause}`, params);
+    const total = parseInt(countRes.rows[0]?.total || 0, 10);
+
+    const queryParams = [...params, limit, offset];
+    const limitIdx = queryParams.length - 1;
+    const offsetIdx = queryParams.length;
+
+    const rowsRes = await query(
+      `SELECT * FROM sales_logs ${whereClause} ORDER BY created_at DESC LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+      queryParams
+    );
+
+    res.json({
+      success: true,
+      logs: rowsRes.rows,
+      pagination: { total, page, limit, totalPages: Math.ceil(total / limit) }
+    });
+  } catch (err) {
+    console.error('Error fetching sales logs:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });

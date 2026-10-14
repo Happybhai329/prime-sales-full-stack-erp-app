@@ -46,7 +46,7 @@ if (process.env.DATABASE_URL) {
         rejectUnauthorized: false
       },
       max: 5,
-      idleTimeoutMillis: 15000,
+      idleTimeoutMillis: 5000,
       connectionTimeoutMillis: 10000
     });
 
@@ -150,8 +150,9 @@ export async function initDatabase() {
         const fallbackPool = new pg.Pool({
           connectionString: process.env.DATABASE_URL,
           ssl: { rejectUnauthorized: false },
-          max: 2,
-          connectionTimeoutMillis: 5000
+          max: 5,
+          idleTimeoutMillis: 5000,
+          connectionTimeoutMillis: 10000
         });
         const client = await fallbackPool.connect();
         await client.query('SELECT 1');
@@ -247,6 +248,96 @@ async function initPostgresSchema() {
     CREATE INDEX IF NOT EXISTS idx_inq_student ON prime_inquiries (student_name);
     CREATE INDEX IF NOT EXISTS idx_inq_mobile ON prime_inquiries (mobile);
     CREATE INDEX IF NOT EXISTS idx_inq_date ON prime_inquiries (inquiry_date);
+
+    -- ==============================================================================
+    -- SALES MODULE TABLES (Central Supabase Mumbai)
+    -- ==============================================================================
+
+    -- Sales Leads Table
+    CREATE TABLE IF NOT EXISTS sales_leads (
+      id SERIAL PRIMARY KEY,
+      student_name TEXT,
+      parent_name TEXT,
+      mobile TEXT,
+      email TEXT,
+      program TEXT,
+      lead_source TEXT,
+      status TEXT DEFAULT 'New',
+      assigned_to TEXT,
+      employee_id TEXT,
+      expected_amount NUMERIC DEFAULT 0,
+      notes TEXT,
+      raw_values JSONB,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Sales Deals Table
+    CREATE TABLE IF NOT EXISTS sales_deals (
+      id SERIAL PRIMARY KEY,
+      lead_id INT,
+      student_name TEXT,
+      program TEXT,
+      deal_value NUMERIC DEFAULT 0,
+      discount_amount NUMERIC DEFAULT 0,
+      final_amount NUMERIC DEFAULT 0,
+      status TEXT DEFAULT 'Open',
+      stage TEXT DEFAULT 'Proposal',
+      closed_date TIMESTAMP WITH TIME ZONE,
+      assigned_to TEXT,
+      employee_id TEXT,
+      raw_values JSONB,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Sales Targets Table
+    CREATE TABLE IF NOT EXISTS sales_targets (
+      id SERIAL PRIMARY KEY,
+      employee_id TEXT NOT NULL,
+      employee_name TEXT,
+      month TEXT NOT NULL,
+      target_admissions INT DEFAULT 0,
+      target_amount NUMERIC DEFAULT 0,
+      achieved_admissions INT DEFAULT 0,
+      achieved_amount NUMERIC DEFAULT 0,
+      status TEXT DEFAULT 'Active',
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT uq_sales_target_emp_month UNIQUE (employee_id, month)
+    );
+
+    -- Sales Activity & Transaction Logs
+    CREATE TABLE IF NOT EXISTS sales_logs (
+      id SERIAL PRIMARY KEY,
+      action TEXT NOT NULL,
+      lead_id INT,
+      deal_id INT,
+      employee_id TEXT,
+      assigned_to TEXT,
+      status TEXT,
+      details TEXT,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Quota & Egress Protection Indexes
+    CREATE INDEX IF NOT EXISTS idx_sales_leads_created_at ON sales_leads (created_at);
+    CREATE INDEX IF NOT EXISTS idx_sales_leads_status ON sales_leads (status);
+    CREATE INDEX IF NOT EXISTS idx_sales_leads_assigned_to ON sales_leads (assigned_to);
+    CREATE INDEX IF NOT EXISTS idx_sales_leads_employee_id ON sales_leads (employee_id);
+
+    CREATE INDEX IF NOT EXISTS idx_sales_deals_created_at ON sales_deals (created_at);
+    CREATE INDEX IF NOT EXISTS idx_sales_deals_status ON sales_deals (status);
+    CREATE INDEX IF NOT EXISTS idx_sales_deals_assigned_to ON sales_deals (assigned_to);
+    CREATE INDEX IF NOT EXISTS idx_sales_deals_employee_id ON sales_deals (employee_id);
+
+    CREATE INDEX IF NOT EXISTS idx_sales_targets_emp_month ON sales_targets (employee_id, month);
+    CREATE INDEX IF NOT EXISTS idx_sales_targets_status ON sales_targets (status);
+
+    CREATE INDEX IF NOT EXISTS idx_sales_logs_created_at ON sales_logs (created_at);
+    CREATE INDEX IF NOT EXISTS idx_sales_logs_status ON sales_logs (status);
+    CREATE INDEX IF NOT EXISTS idx_sales_logs_assigned_to ON sales_logs (assigned_to);
+    CREATE INDEX IF NOT EXISTS idx_sales_logs_employee_id ON sales_logs (employee_id);
   `;
 
   await query(schemaSql);
@@ -322,6 +413,91 @@ async function initSqliteSchema() {
     CREATE INDEX IF NOT EXISTS idx_inq_student ON prime_inquiries (student_name);
     CREATE INDEX IF NOT EXISTS idx_inq_mobile ON prime_inquiries (mobile);
     CREATE INDEX IF NOT EXISTS idx_inq_date ON prime_inquiries (inquiry_date);
+
+    -- ==============================================================================
+    -- SALES MODULE TABLES (SQLite Fallback)
+    -- ==============================================================================
+
+    CREATE TABLE IF NOT EXISTS sales_leads (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_name TEXT,
+      parent_name TEXT,
+      mobile TEXT,
+      email TEXT,
+      program TEXT,
+      lead_source TEXT,
+      status TEXT DEFAULT 'New',
+      assigned_to TEXT,
+      employee_id TEXT,
+      expected_amount REAL DEFAULT 0,
+      notes TEXT,
+      raw_values TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS sales_deals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      lead_id INTEGER,
+      student_name TEXT,
+      program TEXT,
+      deal_value REAL DEFAULT 0,
+      discount_amount REAL DEFAULT 0,
+      final_amount REAL DEFAULT 0,
+      status TEXT DEFAULT 'Open',
+      stage TEXT DEFAULT 'Proposal',
+      closed_date TEXT,
+      assigned_to TEXT,
+      employee_id TEXT,
+      raw_values TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS sales_targets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      employee_id TEXT NOT NULL,
+      employee_name TEXT,
+      month TEXT NOT NULL,
+      target_admissions INTEGER DEFAULT 0,
+      target_amount REAL DEFAULT 0,
+      achieved_admissions INTEGER DEFAULT 0,
+      achieved_amount REAL DEFAULT 0,
+      status TEXT DEFAULT 'Active',
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(employee_id, month)
+    );
+
+    CREATE TABLE IF NOT EXISTS sales_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      action TEXT NOT NULL,
+      lead_id INTEGER,
+      deal_id INTEGER,
+      employee_id TEXT,
+      assigned_to TEXT,
+      status TEXT,
+      details TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_sales_leads_created_at ON sales_leads (created_at);
+    CREATE INDEX IF NOT EXISTS idx_sales_leads_status ON sales_leads (status);
+    CREATE INDEX IF NOT EXISTS idx_sales_leads_assigned_to ON sales_leads (assigned_to);
+    CREATE INDEX IF NOT EXISTS idx_sales_leads_employee_id ON sales_leads (employee_id);
+
+    CREATE INDEX IF NOT EXISTS idx_sales_deals_created_at ON sales_deals (created_at);
+    CREATE INDEX IF NOT EXISTS idx_sales_deals_status ON sales_deals (status);
+    CREATE INDEX IF NOT EXISTS idx_sales_deals_assigned_to ON sales_deals (assigned_to);
+    CREATE INDEX IF NOT EXISTS idx_sales_deals_employee_id ON sales_deals (employee_id);
+
+    CREATE INDEX IF NOT EXISTS idx_sales_targets_emp_month ON sales_targets (employee_id, month);
+    CREATE INDEX IF NOT EXISTS idx_sales_targets_status ON sales_targets (status);
+
+    CREATE INDEX IF NOT EXISTS idx_sales_logs_created_at ON sales_logs (created_at);
+    CREATE INDEX IF NOT EXISTS idx_sales_logs_status ON sales_logs (status);
+    CREATE INDEX IF NOT EXISTS idx_sales_logs_assigned_to ON sales_logs (assigned_to);
+    CREATE INDEX IF NOT EXISTS idx_sales_logs_employee_id ON sales_logs (employee_id);
   `;
 
   // SQLite multiple statements execution
