@@ -1256,25 +1256,45 @@ app.get('/api/admission-form/pdf/:studentId', async (req, res) => {
 // 8.5. SALES MANAGEMENT API (PAGINATED & INDEXED QUOTA/EGRESS SAFE)
 // ==============================================================================
 
-// GET /api/sales/reps - Fetch sales staff from central employees table
+// GET /api/sales/reps - Fetch sales staff from central employees / prime_employees table
 app.get('/api/sales/reps', async (req, res) => {
   try {
-    let empRes = await query(
-      `SELECT id, emp_id AS employee_id, name, department, role, status
-       FROM employees
-       WHERE department ILIKE '%sales%' OR role ILIKE '%sales%' OR role ILIKE '%telecaller%'
-       ORDER BY name ASC
-       LIMIT 100`
-    );
-    if (!empRes.rows || empRes.rows.length === 0) {
+    let empRes;
+    try {
       empRes = await query(
-        `SELECT id, emp_id AS employee_id, name, department, role, status
-         FROM employees
+        `SELECT employee_id, name, department, role, status
+         FROM prime_employees
+         WHERE department ILIKE '%sales%' OR role ILIKE '%sales%' OR role ILIKE '%telecaller%'
          ORDER BY name ASC
          LIMIT 100`
       );
+      if (!empRes.rows || empRes.rows.length === 0) {
+        empRes = await query(
+          `SELECT employee_id, name, department, role, status
+           FROM prime_employees
+           ORDER BY name ASC
+           LIMIT 100`
+        );
+      }
+    } catch (e) {
+      // Fallback to employees table
+      empRes = await query(
+        `SELECT id, emp_id AS employee_id, name, department, role, status
+         FROM employees
+         WHERE department ILIKE '%sales%' OR role ILIKE '%sales%' OR role ILIKE '%telecaller%'
+         ORDER BY name ASC
+         LIMIT 100`
+      );
+      if (!empRes.rows || empRes.rows.length === 0) {
+        empRes = await query(
+          `SELECT id, emp_id AS employee_id, name, department, role, status
+           FROM employees
+           ORDER BY name ASC
+           LIMIT 100`
+        );
+      }
     }
-    res.json({ success: true, reps: empRes.rows });
+    res.json({ success: true, reps: empRes ? empRes.rows : [] });
   } catch (err) {
     res.json({ success: true, reps: [] });
   }
