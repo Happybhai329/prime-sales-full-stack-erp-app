@@ -2,7 +2,7 @@ services:
   - type: web
     name: prime-sales-management-app
     env: node
-    plan: starter
+    plan: free
     region: singapore
     buildCommand: npm install && npm run build
     startCommand: npm start
