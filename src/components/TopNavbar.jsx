@@ -12,7 +12,7 @@ export default function TopNavbar({
     const urls = {
       admission: '/admission-form',
       enquiry: '/enquiry-form',
-      studentReport: 'https://prime-student-report.onrender.com'
+      studentReport: 'https://prime-student-report-dcbz.onrender.com'
     };
     if (urls[type]) window.open(urls[type], '_blank', 'noopener,noreferrer');
   };
