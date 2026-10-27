@@ -47,6 +47,9 @@ export default function RecordsTable({
     return 'table';
   });
 
+  // State to toggle column display mode: 'essential' (clean view) vs 'all' (full spreadsheet view)
+  const [columnMode, setColumnMode] = useState('essential');
+
   // Track expanded cards in mobile view
   const [expandedRows, setExpandedRows] = useState({});
 
@@ -75,14 +78,107 @@ export default function RecordsTable({
     }));
   };
 
-  // Filter out raw VoucherStatus / VoucherPDFLink columns from main table because they have dedicated action buttons & preview
-  const displayHeaders = headers.filter((h) => {
-    const norm = String(h || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (isAdmissionsLike && (norm === 'voucherstatus' || norm === 'voucherpdflink')) {
-      return false;
+  // Build clean display headers based on columnMode ('essential' vs 'all')
+  const displayHeaders = React.useMemo(() => {
+    const rawFiltered = headers.filter((h) => {
+      const norm = String(h || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      // Always exclude raw voucher columns (they are rendered in dedicated Voucher action card)
+      if (isAdmissionsLike && (norm === 'voucherstatus' || norm === 'voucherpdflink')) {
+        return false;
+      }
+
+      if (columnMode === 'essential') {
+        if (activeTab === 'inquiries') {
+          const essentialInq = ['sno', 'date', 'studentname', 'fathername', 'fatherno', 'class', 'completeaddress', 'source', 'notes'];
+          return essentialInq.includes(norm);
+        }
+        const essentialAdm = [
+          'studentsid',
+          'studentname',
+          'fathersname',
+          'fathername',
+          'class',
+          'program',
+          'dateofapplication',
+          'admissiondate',
+          'applicationdate',
+          'mobilenumbers',
+          'mobilenumber',
+          'mobile',
+          'totalamount',
+          'finalcost'
+        ];
+        // Deduplicate multiple synonyms
+        if (norm === 'fathername' && headers.some((x) => String(x).toLowerCase().replace(/[^a-z0-9]/g, '') === 'fathersname')) {
+          return false;
+        }
+        if (norm === 'mobilenumber' && headers.some((x) => String(x).toLowerCase().replace(/[^a-z0-9]/g, '') === 'mobilenumbers')) {
+          return false;
+        }
+        if (norm === 'applicationdate' && headers.some((x) => String(x).toLowerCase().replace(/[^a-z0-9]/g, '') === 'dateofapplication')) {
+          return false;
+        }
+        return essentialAdm.includes(norm);
+      }
+
+      // 'all' mode: hide trailing ghost duplicate columns that are completely unpopulated
+      const ghostHeaders = ['alternatemobile', 'employeeid', 'employeename', 'batch', 'createdat'];
+      if (ghostHeaders.includes(norm)) return false;
+      if (isAdmissionsLike && ['fathername', 'mothername', 'mobilenumber', 'aadhaar', 'applicationdate', 'status'].includes(norm)) {
+        return false;
+      }
+      return true;
+    });
+
+    // In essential mode, sort logically (Student ID -> Student Name -> Father Name -> Class -> Program -> Date -> Phone -> Fees)
+    if (columnMode === 'essential') {
+      const orderMap = activeTab === 'inquiries' ? {
+        'sno': 1,
+        'date': 2,
+        'studentname': 3,
+        'fathername': 4,
+        'fatherno': 5,
+        'class': 6,
+        'completeaddress': 7,
+        'source': 8,
+        'notes': 9
+      } : {
+        'studentsid': 1,
+        'studentname': 2,
+        'fathersname': 3,
+        'fathername': 3,
+        'class': 4,
+        'program': 5,
+        'dateofapplication': 6,
+        'admissiondate': 6,
+        'applicationdate': 6,
+        'mobilenumbers': 7,
+        'mobilenumber': 7,
+        'mobile': 7,
+        'totalamount': 8,
+        'finalcost': 9
+      };
+
+      rawFiltered.sort((a, b) => {
+        const normA = String(a || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const normB = String(b || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        return (orderMap[normA] || 99) - (orderMap[normB] || 99);
+      });
     }
-    return true;
-  });
+
+    return rawFiltered;
+  }, [headers, activeTab, columnMode, isAdmissionsLike]);
+
+  // Headers for card expansion (all populated non-voucher headers)
+  const cardDetailHeaders = React.useMemo(() => {
+    return headers.filter((h) => {
+      const norm = String(h || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (isAdmissionsLike && (norm === 'voucherstatus' || norm === 'voucherpdflink')) return false;
+      const ghostHeaders = ['alternatemobile', 'employeeid', 'employeename', 'batch', 'createdat'];
+      if (ghostHeaders.includes(norm)) return false;
+      return true;
+    });
+  }, [headers, isAdmissionsLike]);
 
   const getHeaderIndex = (h) => headers.indexOf(h);
 
@@ -189,32 +285,58 @@ export default function RecordsTable({
 
   return (
     <div className="records-container">
-      {/* View Switcher Header (Cards vs Table) */}
+      {/* View Switcher Header (Cards vs Table) and Column Mode Toggle */}
       <div className="table-top-bar">
-        <div className="view-mode-toggle">
-          <button
-            type="button"
-            className={`toggle-btn ${viewMode === 'cards' ? 'active' : ''}`}
-            onClick={() => setViewMode('cards')}
-            title="Switch to Mobile Card View"
-          >
-            <LayoutGrid size={13} />
-            <span>Cards</span>
-          </button>
-          <button
-            type="button"
-            className={`toggle-btn ${viewMode === 'table' ? 'active' : ''}`}
-            onClick={() => setViewMode('table')}
-            title="Switch to Full Table View"
-          >
-            <TableIcon size={13} />
-            <span>Table</span>
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <div className="view-mode-toggle">
+            <button
+              type="button"
+              className={`toggle-btn ${viewMode === 'cards' ? 'active' : ''}`}
+              onClick={() => setViewMode('cards')}
+              title="Switch to Mobile Card View"
+            >
+              <LayoutGrid size={13} />
+              <span>Cards</span>
+            </button>
+            <button
+              type="button"
+              className={`toggle-btn ${viewMode === 'table' ? 'active' : ''}`}
+              onClick={() => setViewMode('table')}
+              title="Switch to Full Table View"
+            >
+              <TableIcon size={13} />
+              <span>Table</span>
+            </button>
+          </div>
+
+          {viewMode === 'table' && (
+            <div className="view-mode-toggle column-mode-toggle">
+              <button
+                type="button"
+                className={`toggle-btn ${columnMode === 'essential' ? 'active' : ''}`}
+                onClick={() => setColumnMode('essential')}
+                title="Show only essential columns (Name, Program, Date, Phone, Fees, Voucher, Actions)"
+              >
+                <span>⚡ Essential Columns</span>
+              </button>
+              <button
+                type="button"
+                className={`toggle-btn ${columnMode === 'all' ? 'active' : ''}`}
+                onClick={() => setColumnMode('all')}
+                title="Show all spreadsheet columns with horizontal scroll"
+              >
+                <span>📑 All Columns ({displayHeaders.length})</span>
+              </button>
+            </div>
+          )}
         </div>
+
         <div className="view-mode-hint">
           {viewMode === 'cards'
             ? 'Touch-friendly student cards with quick actions'
-            : 'Full data spreadsheet with horizontal scroll'}
+            : columnMode === 'essential'
+              ? 'Showing essential columns for clean viewing'
+              : 'Full data spreadsheet with horizontal scroll'}
         </div>
       </div>
 
@@ -409,7 +531,7 @@ export default function RecordsTable({
                   {isExpanded && (
                     <div className="card-expanded-content">
                       <div className="expanded-details-grid">
-                        {displayHeaders.map((header) => {
+                        {cardDetailHeaders.map((header) => {
                           const idx = getHeaderIndex(header);
                           const val = values[idx];
                           if (val == null || val === '') return null;
