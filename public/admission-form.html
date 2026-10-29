@@ -1180,9 +1180,17 @@
   <body>
     <div class="page-shell">
       <nav class="portal-nav-bar" style="background: #090d16; padding: 12px 20px; border-radius: 10px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid rgba(255,255,255,0.1); flex-wrap: wrap; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <img src="/tpc-logo.png" alt="TPC" style="width: 28px; height: 28px; border-radius: 50%;" onerror="this.onerror=null; this.src='/tpc-logo.jpg';">
-          <span style="color: #f1f5f9; font-weight: 700; font-size: 0.9rem; letter-spacing: 0.03em;">THE PRIME CLASSES SALES DASHBOARD</span>
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <img src="/tpc-logo.png" alt="TPC" style="width: 28px; height: 28px; border-radius: 50%;" onerror="this.onerror=null; this.src='/tpc-logo.jpg';">
+            <span style="color: #f1f5f9; font-weight: 700; font-size: 0.9rem; letter-spacing: 0.03em;">THE PRIME CLASSES</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.08); padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.15);">
+            <span style="font-size: 12px; color: #fde68a; font-weight: 700;">🎓 Academic Session:</span>
+            <select id="academicSessionSelect" style="background: transparent; color: #ffffff; border: none; font-size: 13px; font-weight: 800; cursor: pointer; outline: none;">
+              <option value="2026" style="background: #0f172a; color: #ffffff;">Session 2026</option>
+            </select>
+          </div>
         </div>
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
           <a href="/" style="color: #cbd5e1; font-size: 13px; font-weight: 600; text-decoration: none; padding: 6px 14px; border-radius: 6px; background: rgba(255,255,255,0.06); display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;">🏠 Sales Dashboard</a>
@@ -2036,11 +2044,42 @@
       
       // === LOAD DYNAMIC DATA ON PAGE LOAD ===
       function initAll() {
+        loadAcademicSessions();
         setApplicationDate();
         loadAcademicPrograms();
         loadFeeTypes();
         initializeEnquiryModal();
         initializeEmailValidation();
+      }
+
+      // === LOAD ACADEMIC SESSIONS ===
+      async function loadAcademicSessions() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const requestedSession = urlParams.get('session');
+        const sessionSelect = document.getElementById('academicSessionSelect');
+
+        try {
+          const res = await fetch('/api/sessions');
+          const data = await res.json();
+          if (data && data.success && Array.isArray(data.sessions) && data.sessions.length > 0) {
+            if (sessionSelect) {
+              sessionSelect.innerHTML = '';
+              data.sessions.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.name;
+                opt.textContent = `Session ${s.name}${s.is_current ? ' (Active)' : ''}`;
+                opt.style.background = '#0f172a';
+                opt.style.color = '#ffffff';
+                if (requestedSession ? s.name === requestedSession : s.is_current) {
+                  opt.selected = true;
+                }
+                sessionSelect.appendChild(opt);
+              });
+            }
+          }
+        } catch (err) {
+          console.warn('Could not load sessions:', err.message);
+        }
       }
 
       if (document.readyState === 'loading') {
@@ -2994,8 +3033,15 @@
 
         try {
           // 1. Gather all text/select form data
-          // === UPDATED FORMDATA (with all new fields) ===
+          // === UPDATED FORMDATA (with all new fields & session) ===
+          const urlParams = new URLSearchParams(window.location.search);
+          const requestedSession = urlParams.get('session');
+          const sessionVal = document.getElementById('academicSessionSelect')
+            ? document.getElementById('academicSessionSelect').value
+            : (requestedSession || '2026');
+
           const formData = {
+            session: sessionVal,
             // Section 1
             applicationDate: document.getElementById('applicationDate').value, // <-- NEW
             studentName: document.getElementById('studentName').value,

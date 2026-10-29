@@ -128,41 +128,16 @@ export async function triggerSync() {
   }
 
   syncState.status = 'syncing';
-  console.log('[SyncEngine] Starting full inbound sync from Google Spreadsheets...');
+  console.log('[SyncEngine] Starting full inbound sync from Google Spreadsheets across all sessions...');
 
   try {
     const startTime = Date.now();
 
-    // Fetch all remote sheets in parallel
-    const [admissionsData, inquiriesData, cancelledData, programsData, feesData] =
-      await Promise.all([
-        sheets.fetchRemoteAdmissions(),
-        sheets.fetchRemoteInquiries(),
-        sheets.fetchRemoteCancelled(),
-        sheets.fetchRemotePrograms(),
-        sheets.fetchRemoteFeeTypes()
-      ]);
-
-    console.log(
-      `[SyncEngine] Fetched: ${admissionsData.rows.length} admissions, ${inquiriesData.rows.length} inquiries, ${cancelledData.rows.length} cancelled.`
-    );
-
-    // Save headers metadata
-    await query(
-      `INSERT INTO prime_sync_meta (key, value, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP)
-       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
-      ['admissions_headers', JSON.stringify(admissionsData.headers)]
-    );
-    await query(
-      `INSERT INTO prime_sync_meta (key, value, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP)
-       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
-      ['inquiries_headers', JSON.stringify(inquiriesData.headers)]
-    );
-    await query(
-      `INSERT INTO prime_sync_meta (key, value, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP)
-       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
-      ['cancelled_headers', JSON.stringify(cancelledData.headers)]
-    );
+    // 1. Ingest Global Academic Programs & Fee Types in parallel
+    const [programsData, feesData] = await Promise.all([
+      sheets.fetchRemotePrograms(),
+      sheets.fetchRemoteFeeTypes()
+    ]);
 
     // Multi-row batch insert helper with onConflict support
     async function batchInsert(tableName, columns, rowsData, onConflict = '') {
@@ -184,7 +159,7 @@ export async function triggerSync() {
       }
     }
 
-    // 1. Ingest Academic Programs (deduplicated)
+    // Ingest Academic Programs
     await query('DELETE FROM prime_academic_programs');
     const programSet = new Set();
     programsData.rows.forEach((r) => {
@@ -201,7 +176,7 @@ export async function triggerSync() {
       );
     }
 
-    // 2. Ingest Fee Types (deduplicated)
+    // Ingest Fee Types
     await query('DELETE FROM prime_fee_types');
     const feeMap = new Map();
     feesData.rows.forEach((r) => {
@@ -219,281 +194,392 @@ export async function triggerSync() {
       );
     }
 
-    // 3. Ingest Inquiries in batches (Non-destructive UPSERT preserving local submissions)
-    const inqHeaders = inquiriesData.headers;
-    const inquiryInsertRows = inquiriesData.rows.map((row) => {
-      const studentName = String(
-        getValueByHeaderName(inqHeaders, row.values, 'Student Name', [
-          { include: ['name'], exclude: ['father', 'mother'] }
-        ]) || ''
-      ).trim();
-      const fatherName = String(
-        getValueByHeaderName(inqHeaders, row.values, "Father's Name", [
-          { include: ['father'] }
-        ]) || ''
-      ).trim();
-      const mobile = normalizePhone(
-        getValueByHeaderName(inqHeaders, row.values, 'Mobile', [
-          { include: ['mobile'] },
-          { include: ['phone'] },
-          { include: ['contact'] }
-        ])
-      );
-      const program = String(
-        getValueByHeaderName(inqHeaders, row.values, 'Program', [
-          { include: ['program'] },
-          { include: ['course'] }
-        ]) || ''
-      ).trim();
-      const inquiryDate = parseFlexibleDate(
-        getValueByHeaderName(inqHeaders, row.values, 'Date', [
-          { include: ['date'] },
-          { include: ['timestamp'] }
-        ])
-      );
+    // 2. Fetch all registered Academic Sessions
+    let sessions = [];
+    try {
+      const sRes = await query('SELECT * FROM prime_sessions ORDER BY id ASC');
+      sessions = sRes.rows;
+    } catch (e) {}
 
-      return [
-        row.rowNumber,
-        studentName,
-        fatherName,
-        mobile,
-        program,
-        inquiryDate,
-        JSON.stringify(row.values)
+    if (!sessions || sessions.length === 0) {
+      sessions = [
+        {
+          name: '2026',
+          admissions_sheet_name: 'Admissions',
+          inquiries_sheet_name: 'Enquiries',
+          cancelled_sheet_name: 'Cancelled',
+          is_current: true
+        }
       ];
-    });
+    }
 
-    await batchInsert(
-      'prime_inquiries',
-      [
-        'row_number',
-        'student_name',
-        'father_name',
-        'mobile',
-        'program',
-        'inquiry_date',
-        'raw_values'
-      ],
-      inquiryInsertRows,
-      `ON CONFLICT (row_number) DO UPDATE SET
-        student_name = EXCLUDED.student_name,
-        father_name = EXCLUDED.father_name,
-        mobile = EXCLUDED.mobile,
-        program = EXCLUDED.program,
-        inquiry_date = EXCLUDED.inquiry_date,
-        raw_values = EXCLUDED.raw_values`
-    );
+    let totalAdmissionsCount = 0;
+    let totalInquiriesCount = 0;
+    let totalCancelledCount = 0;
+    let currentSessionStats = null;
 
-    // 4. Ingest Admissions in batches (Non-destructive UPSERT preserving local submissions)
-    const admHeaders = admissionsData.headers;
-    const admissionInsertRows = admissionsData.rows.map((row) => {
-      const studentName = String(
-        getValueByHeaderName(admHeaders, row.values, 'Student Name', [
-          { include: ['student', 'name'] },
-          { include: ['name'], exclude: ['father', 'mother', 'parent'] }
-        ]) || ''
-      ).trim();
+    // 3. Process each session individually
+    for (const session of sessions) {
+      const sName = session.name;
+      const admSheet = session.admissions_sheet_name || (sName === '2026' ? 'Admissions' : `Admissions_${sName}`);
+      const inqSheet = session.inquiries_sheet_name || (sName === '2026' ? 'Enquiries' : `Enquiries_${sName}`);
+      const canSheet = session.cancelled_sheet_name || (sName === '2026' ? 'Cancelled' : `Cancelled_${sName}`);
 
-      const fatherName = String(
-        getValueByHeaderName(admHeaders, row.values, "Father's Name", [
-          { include: ['father', 'name'] },
-          { include: ['parent', 'name'] }
-        ]) || ''
-      ).trim();
+      console.log(`[SyncEngine] Processing session "${sName}" (Sheets: ${admSheet}, ${inqSheet}, ${canSheet})...`);
 
-      const program = String(
-        getValueByHeaderName(admHeaders, row.values, 'Program', [
-          { include: ['program'] },
-          { include: ['course'] }
-        ]) || ''
-      ).trim();
+      const [admissionsData, inquiriesData, cancelledData] = await Promise.all([
+        sheets.fetchRemoteAdmissions(admSheet),
+        sheets.fetchRemoteInquiries(inqSheet),
+        sheets.fetchRemoteCancelled(canSheet)
+      ]);
 
-      const admissionDate = parseFlexibleDate(
-        getValueByHeaderName(admHeaders, row.values, 'Date of Application', [
-          { include: ['date', 'of', 'application'] },
-          { include: ['admission', 'date'] },
-          { include: ['date'], exclude: ['cancel', 'due', 'payment', 'last'] }
-        ])
+      totalAdmissionsCount += admissionsData.rows.length;
+      totalInquiriesCount += inquiriesData.rows.length;
+      totalCancelledCount += cancelledData.rows.length;
+
+      // Save headers metadata for this specific session
+      await query(
+        `INSERT INTO prime_sync_meta (key, value, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP)
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
+        [`admissions_headers_${sName}`, JSON.stringify(admissionsData.headers)]
+      );
+      await query(
+        `INSERT INTO prime_sync_meta (key, value, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP)
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
+        [`inquiries_headers_${sName}`, JSON.stringify(inquiriesData.headers)]
       );
 
-      const startSession = String(
-        getValueByHeaderName(admHeaders, row.values, 'Start Session', [{ include: ['start', 'session'] }]) || ''
-      ).trim();
-      const endSession = String(
-        getValueByHeaderName(admHeaders, row.values, 'End Session', [{ include: ['end', 'session'] }]) || ''
-      ).trim();
-      const mobile = normalizePhone(
-        getValueByHeaderName(admHeaders, row.values, 'Mobile Numbers', [
-          { include: ['mobile'] },
-          { include: ['phone'] },
-          { include: ['contact'] }
-        ])
+      if (session.is_current) {
+        await query(
+          `INSERT INTO prime_sync_meta (key, value, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP)
+           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
+          ['admissions_headers', JSON.stringify(admissionsData.headers)]
+        );
+        await query(
+          `INSERT INTO prime_sync_meta (key, value, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP)
+           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
+          ['inquiries_headers', JSON.stringify(inquiriesData.headers)]
+        );
+        await query(
+          `INSERT INTO prime_sync_meta (key, value, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP)
+           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
+          ['cancelled_headers', JSON.stringify(cancelledData.headers)]
+        );
+      }
+
+      // Ingest Inquiries for this session
+      const inqHeaders = inquiriesData.headers;
+      const inquiryInsertRows = inquiriesData.rows.map((row) => {
+        const studentName = String(
+          getValueByHeaderName(inqHeaders, row.values, 'Student Name', [
+            { include: ['name'], exclude: ['father', 'mother'] }
+          ]) || ''
+        ).trim();
+        const fatherName = String(
+          getValueByHeaderName(inqHeaders, row.values, "Father's Name", [
+            { include: ['father'] }
+          ]) || ''
+        ).trim();
+        const mobile = normalizePhone(
+          getValueByHeaderName(inqHeaders, row.values, 'Mobile', [
+            { include: ['mobile'] },
+            { include: ['phone'] },
+            { include: ['contact'] }
+          ])
+        );
+        const program = String(
+          getValueByHeaderName(inqHeaders, row.values, 'Program', [
+            { include: ['program'] },
+            { include: ['course'] }
+          ]) || ''
+        ).trim();
+        const inquiryDate = parseFlexibleDate(
+          getValueByHeaderName(inqHeaders, row.values, 'Date', [
+            { include: ['date'] },
+            { include: ['timestamp'] }
+          ])
+        );
+
+        return [
+          sName,
+          row.rowNumber,
+          studentName,
+          fatherName,
+          mobile,
+          program,
+          inquiryDate,
+          JSON.stringify(row.values)
+        ];
+      });
+
+      if (inquiryInsertRows.length > 0) {
+        await batchInsert(
+          'prime_inquiries',
+          [
+            'session_name',
+            'row_number',
+            'student_name',
+            'father_name',
+            'mobile',
+            'program',
+            'inquiry_date',
+            'raw_values'
+          ],
+          inquiryInsertRows,
+          `ON CONFLICT (session_name, row_number) DO UPDATE SET
+            student_name = EXCLUDED.student_name,
+            father_name = EXCLUDED.father_name,
+            mobile = EXCLUDED.mobile,
+            program = EXCLUDED.program,
+            inquiry_date = EXCLUDED.inquiry_date,
+            raw_values = EXCLUDED.raw_values`
+        );
+      }
+
+      // Ingest Admissions for this session
+      const admHeaders = admissionsData.headers;
+      const admissionInsertRows = admissionsData.rows.map((row) => {
+        const studentName = String(
+          getValueByHeaderName(admHeaders, row.values, 'Student Name', [
+            { include: ['student', 'name'] },
+            { include: ['name'], exclude: ['father', 'mother', 'parent'] }
+          ]) || ''
+        ).trim();
+
+        const fatherName = String(
+          getValueByHeaderName(admHeaders, row.values, "Father's Name", [
+            { include: ['father', 'name'] },
+            { include: ['parent', 'name'] }
+          ]) || ''
+        ).trim();
+
+        const program = String(
+          getValueByHeaderName(admHeaders, row.values, 'Program', [
+            { include: ['program'] },
+            { include: ['course'] }
+          ]) || ''
+        ).trim();
+
+        const admissionDate = parseFlexibleDate(
+          getValueByHeaderName(admHeaders, row.values, 'Date of Application', [
+            { include: ['date', 'of', 'application'] },
+            { include: ['admission', 'date'] },
+            { include: ['date'], exclude: ['cancel', 'due', 'payment', 'last'] }
+          ])
+        );
+
+        const startSession = String(
+          getValueByHeaderName(admHeaders, row.values, 'Start Session', [{ include: ['start', 'session'] }]) || ''
+        ).trim();
+        const endSession = String(
+          getValueByHeaderName(admHeaders, row.values, 'End Session', [{ include: ['end', 'session'] }]) || ''
+        ).trim();
+        const mobile = normalizePhone(
+          getValueByHeaderName(admHeaders, row.values, 'Mobile Numbers', [
+            { include: ['mobile'] },
+            { include: ['phone'] },
+            { include: ['contact'] }
+          ])
+        );
+
+        const regFee = parseNumber(getValueByHeaderName(admHeaders, row.values, 'Registration Fee', [{ include: ['registration', 'fee'] }])) || 0;
+        const tuitionFee = parseNumber(getValueByHeaderName(admHeaders, row.values, 'Tuition Fee', [{ include: ['tuition', 'fee'] }])) || 0;
+        const otherFeesJson = String(getValueByHeaderName(admHeaders, row.values, 'Other Fees (JSON)', [{ include: ['other', 'fees'] }]) || '');
+        const totalAmount = parseNumber(getValueByHeaderName(admHeaders, row.values, 'Total Amount', [{ include: ['total', 'amount'] }])) || 0;
+        const discountPercent = parseNumber(getValueByHeaderName(admHeaders, row.values, 'Discount (%)', [{ include: ['discount'] }])) || 0;
+        const scholarship = parseNumber(getValueByHeaderName(admHeaders, row.values, 'Scholarship Amount', [{ include: ['scholarship'] }])) || 0;
+        const gstPercent = parseNumber(getValueByHeaderName(admHeaders, row.values, 'GST (%)', [{ include: ['gst'] }])) || 0;
+        const finalCost = parseNumber(getValueByHeaderName(admHeaders, row.values, 'Final Cost', [{ include: ['final', 'cost'] }])) || 0;
+        const installmentDetailsJson = String(getValueByHeaderName(admHeaders, row.values, 'Installment Details (JSON)', [{ include: ['installment'] }]) || '');
+
+        const voucherStatus = String(getValueByHeaderName(admHeaders, row.values, 'VoucherStatus', [{ include: ['voucherstatus'] }]) || 'Not Given').trim();
+        const voucherPdfLink = String(getValueByHeaderName(admHeaders, row.values, 'VoucherPDFLink', [{ include: ['voucherpdflink'] }]) || '').trim();
+
+        return [
+          sName,
+          row.rowNumber,
+          studentName,
+          fatherName,
+          program,
+          admissionDate,
+          startSession,
+          endSession,
+          mobile,
+          regFee,
+          tuitionFee,
+          otherFeesJson,
+          totalAmount,
+          discountPercent,
+          scholarship,
+          gstPercent,
+          finalCost,
+          installmentDetailsJson,
+          voucherStatus,
+          voucherPdfLink,
+          JSON.stringify(row.values)
+        ];
+      });
+
+      if (admissionInsertRows.length > 0) {
+        await batchInsert(
+          'prime_admissions',
+          [
+            'session_name',
+            'row_number',
+            'student_name',
+            'father_name',
+            'program',
+            'admission_date',
+            'start_session',
+            'end_session',
+            'mobile',
+            'registration_fee',
+            'tuition_fee',
+            'other_fees_json',
+            'total_amount',
+            'discount_percent',
+            'scholarship_amount',
+            'gst_percent',
+            'final_cost',
+            'installment_details_json',
+            'voucher_status',
+            'voucher_pdf_link',
+            'raw_values'
+          ],
+          admissionInsertRows,
+          `ON CONFLICT (session_name, row_number) DO UPDATE SET
+            student_name = EXCLUDED.student_name,
+            father_name = EXCLUDED.father_name,
+            program = EXCLUDED.program,
+            admission_date = EXCLUDED.admission_date,
+            start_session = EXCLUDED.start_session,
+            end_session = EXCLUDED.end_session,
+            mobile = EXCLUDED.mobile,
+            registration_fee = EXCLUDED.registration_fee,
+            tuition_fee = EXCLUDED.tuition_fee,
+            other_fees_json = EXCLUDED.other_fees_json,
+            total_amount = EXCLUDED.total_amount,
+            discount_percent = EXCLUDED.discount_percent,
+            scholarship_amount = EXCLUDED.scholarship_amount,
+            gst_percent = EXCLUDED.gst_percent,
+            final_cost = EXCLUDED.final_cost,
+            installment_details_json = EXCLUDED.installment_details_json,
+            voucher_status = COALESCE(prime_admissions.voucher_status, EXCLUDED.voucher_status),
+            voucher_pdf_link = COALESCE(prime_admissions.voucher_pdf_link, EXCLUDED.voucher_pdf_link),
+            raw_values = EXCLUDED.raw_values`
+        );
+      }
+
+      // Ingest Cancelled for this session
+      await query('DELETE FROM prime_cancelled_admissions WHERE session_name = $1', [sName]);
+      const canHeaders = cancelledData.headers;
+      const cancelledInsertRows = cancelledData.rows.map((row) => {
+        const studentName = String(
+          getValueByHeaderName(canHeaders, row.values, 'Student Name', [{ include: ['student', 'name'] }, { include: ['name'] }]) || ''
+        ).trim();
+        const fatherName = String(
+          getValueByHeaderName(canHeaders, row.values, "Father's Name", [{ include: ['father'] }]) || ''
+        ).trim();
+        const program = String(
+          getValueByHeaderName(canHeaders, row.values, 'Program', [{ include: ['program'] }]) || ''
+        ).trim();
+        const cancelDate = parseFlexibleDate(
+          getValueByHeaderName(canHeaders, row.values, 'Cancellation Date', [{ include: ['cancel'] }, { include: ['date'] }])
+        );
+
+        return [
+          sName,
+          row.rowNumber,
+          studentName,
+          fatherName,
+          program,
+          cancelDate,
+          JSON.stringify(row.values)
+        ];
+      });
+
+      if (cancelledInsertRows.length > 0) {
+        await batchInsert(
+          'prime_cancelled_admissions',
+          [
+            'session_name',
+            'row_number',
+            'student_name',
+            'father_name',
+            'program',
+            'cancel_date',
+            'raw_values'
+          ],
+          cancelledInsertRows,
+          `ON CONFLICT (session_name, row_number) DO UPDATE SET
+            student_name = EXCLUDED.student_name,
+            father_name = EXCLUDED.father_name,
+            program = EXCLUDED.program,
+            cancel_date = EXCLUDED.cancel_date,
+            raw_values = EXCLUDED.raw_values`
+        );
+      }
+
+      // 4. Run Conversion Matching Algorithm for this session
+      const inquiryIdentitySet = new Set();
+      inquiriesData.rows.forEach((row) => {
+        extractRecordIdentifiers(inqHeaders, row.values).forEach((id) =>
+          inquiryIdentitySet.add(id)
+        );
+      });
+
+      const matchedAdmissionRows = admissionsData.rows.filter((row) => {
+        const identifiers = extractRecordIdentifiers(admHeaders, row.values);
+        return identifiers.length && identifiers.some((id) => inquiryIdentitySet.has(id));
+      });
+
+      const totalInqCount = inquiriesData.rows.length;
+      const conversionRate = totalInqCount
+        ? Number(((matchedAdmissionRows.length / totalInqCount) * 100).toFixed(2))
+        : 0;
+
+      const matchedRowNumbers = matchedAdmissionRows.map((r) => r.rowNumber);
+
+      // Save matched conversions for this session
+      await query(
+        `INSERT INTO prime_sync_meta (key, value, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP)
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
+        [`matched_conversions_${sName}`, JSON.stringify(matchedRowNumbers)]
       );
 
-      const regFee = parseNumber(getValueByHeaderName(admHeaders, row.values, 'Registration Fee', [{ include: ['registration', 'fee'] }])) || 0;
-      const tuitionFee = parseNumber(getValueByHeaderName(admHeaders, row.values, 'Tuition Fee', [{ include: ['tuition', 'fee'] }])) || 0;
-      const otherFeesJson = String(getValueByHeaderName(admHeaders, row.values, 'Other Fees (JSON)', [{ include: ['other', 'fees'] }]) || '');
-      const totalAmount = parseNumber(getValueByHeaderName(admHeaders, row.values, 'Total Amount', [{ include: ['total', 'amount'] }])) || 0;
-      const discountPercent = parseNumber(getValueByHeaderName(admHeaders, row.values, 'Discount (%)', [{ include: ['discount'] }])) || 0;
-      const scholarship = parseNumber(getValueByHeaderName(admHeaders, row.values, 'Scholarship Amount', [{ include: ['scholarship'] }])) || 0;
-      const gstPercent = parseNumber(getValueByHeaderName(admHeaders, row.values, 'GST (%)', [{ include: ['gst'] }])) || 0;
-      const finalCost = parseNumber(getValueByHeaderName(admHeaders, row.values, 'Final Cost', [{ include: ['final', 'cost'] }])) || 0;
-      const installmentDetailsJson = String(getValueByHeaderName(admHeaders, row.values, 'Installment Details (JSON)', [{ include: ['installment'] }]) || '');
+      if (session.is_current) {
+        await query(
+          `INSERT INTO prime_sync_meta (key, value, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP)
+           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
+          ['matched_conversions', JSON.stringify(matchedRowNumbers)]
+        );
 
-      const voucherStatus = String(getValueByHeaderName(admHeaders, row.values, 'VoucherStatus', [{ include: ['voucherstatus'] }]) || 'Not Given').trim();
-      const voucherPdfLink = String(getValueByHeaderName(admHeaders, row.values, 'VoucherPDFLink', [{ include: ['voucherpdflink'] }]) || '').trim();
-
-      return [
-        row.rowNumber,
-        studentName,
-        fatherName,
-        program,
-        admissionDate,
-        startSession,
-        endSession,
-        mobile,
-        regFee,
-        tuitionFee,
-        otherFeesJson,
-        totalAmount,
-        discountPercent,
-        scholarship,
-        gstPercent,
-        finalCost,
-        installmentDetailsJson,
-        voucherStatus,
-        voucherPdfLink,
-        JSON.stringify(row.values)
-      ];
-    });
-
-    await batchInsert(
-      'prime_admissions',
-      [
-        'row_number',
-        'student_name',
-        'father_name',
-        'program',
-        'admission_date',
-        'start_session',
-        'end_session',
-        'mobile',
-        'registration_fee',
-        'tuition_fee',
-        'other_fees_json',
-        'total_amount',
-        'discount_percent',
-        'scholarship_amount',
-        'gst_percent',
-        'final_cost',
-        'installment_details_json',
-        'voucher_status',
-        'voucher_pdf_link',
-        'raw_values'
-      ],
-      admissionInsertRows,
-      `ON CONFLICT (row_number) DO UPDATE SET
-        student_name = EXCLUDED.student_name,
-        father_name = EXCLUDED.father_name,
-        program = EXCLUDED.program,
-        admission_date = EXCLUDED.admission_date,
-        start_session = EXCLUDED.start_session,
-        end_session = EXCLUDED.end_session,
-        mobile = EXCLUDED.mobile,
-        registration_fee = EXCLUDED.registration_fee,
-        tuition_fee = EXCLUDED.tuition_fee,
-        other_fees_json = EXCLUDED.other_fees_json,
-        total_amount = EXCLUDED.total_amount,
-        discount_percent = EXCLUDED.discount_percent,
-        scholarship_amount = EXCLUDED.scholarship_amount,
-        gst_percent = EXCLUDED.gst_percent,
-        final_cost = EXCLUDED.final_cost,
-        installment_details_json = EXCLUDED.installment_details_json,
-        voucher_status = COALESCE(prime_admissions.voucher_status, EXCLUDED.voucher_status),
-        voucher_pdf_link = COALESCE(prime_admissions.voucher_pdf_link, EXCLUDED.voucher_pdf_link),
-        raw_values = EXCLUDED.raw_values`
-    );
-
-    // 5. Ingest Cancelled in batches
-    await query('DELETE FROM prime_cancelled_admissions');
-    const canHeaders = cancelledData.headers;
-    const cancelledInsertRows = cancelledData.rows.map((row) => {
-      const studentName = String(
-        getValueByHeaderName(canHeaders, row.values, 'Student Name', [{ include: ['student', 'name'] }, { include: ['name'] }]) || ''
-      ).trim();
-      const fatherName = String(
-        getValueByHeaderName(canHeaders, row.values, "Father's Name", [{ include: ['father'] }]) || ''
-      ).trim();
-      const program = String(
-        getValueByHeaderName(canHeaders, row.values, 'Program', [{ include: ['program'] }]) || ''
-      ).trim();
-      const cancelDate = parseFlexibleDate(
-        getValueByHeaderName(canHeaders, row.values, 'Cancellation Date', [{ include: ['cancel'] }, { include: ['date'] }])
-      );
-
-      return [
-        row.rowNumber,
-        studentName,
-        fatherName,
-        program,
-        cancelDate,
-        JSON.stringify(row.values)
-      ];
-    });
-
-    await batchInsert(
-      'prime_cancelled_admissions',
-      [
-        'row_number',
-        'student_name',
-        'father_name',
-        'program',
-        'cancel_date',
-        'raw_values'
-      ],
-      cancelledInsertRows
-    );
-
-    // 6. Run Conversion Matching Algorithm
-    const inquiryIdentitySet = new Set();
-    inquiriesData.rows.forEach((row) => {
-      extractRecordIdentifiers(inqHeaders, row.values).forEach((id) =>
-        inquiryIdentitySet.add(id)
-      );
-    });
-
-    const matchedAdmissionRows = admissionsData.rows.filter((row) => {
-      const identifiers = extractRecordIdentifiers(admHeaders, row.values);
-      return identifiers.length && identifiers.some((id) => inquiryIdentitySet.has(id));
-    });
-
-    const totalInquiries = inquiriesData.rows.length;
-    const conversionRate = totalInquiries
-      ? Number(((matchedAdmissionRows.length / totalInquiries) * 100).toFixed(2))
-      : 0;
-
-    const matchedRowNumbers = matchedAdmissionRows.map((r) => r.rowNumber);
-    await query(
-      `INSERT INTO prime_sync_meta (key, value, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP)
-       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
-      ['matched_conversions', JSON.stringify(matchedRowNumbers)]
-    );
+        currentSessionStats = {
+          session: sName,
+          admissions: admissionsData.rows.length,
+          inquiries: inquiriesData.rows.length,
+          cancelled: cancelledData.rows.length,
+          conversions: matchedAdmissionRows.length,
+          conversionRate
+        };
+      }
+    }
 
     const elapsedMs = Date.now() - startTime;
     console.log(
-      `[SyncEngine] Inbound sync completed in ${elapsedMs}ms. Conversions: ${matchedAdmissionRows.length} (${conversionRate}%).`
+      `[SyncEngine] Multi-session inbound sync completed in ${elapsedMs}ms across ${sessions.length} sessions. Total admissions: ${totalAdmissionsCount}.`
     );
 
     syncState = {
       status: 'success',
       lastSyncTime: new Date().toISOString(),
       lastError: null,
-      stats: {
-        admissions: admissionsData.rows.length,
-        inquiries: inquiriesData.rows.length,
-        cancelled: cancelledData.rows.length,
-        conversions: matchedAdmissionRows.length,
-        conversionRate
+      stats: currentSessionStats || {
+        admissions: totalAdmissionsCount,
+        inquiries: totalInquiriesCount,
+        cancelled: totalCancelledCount,
+        conversions: 0,
+        conversionRate: 0
       }
     };
 

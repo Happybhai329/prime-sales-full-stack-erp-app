@@ -21,7 +21,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  Repeat
 } from 'lucide-react';
 
 export default function RecordsTable({
@@ -35,6 +36,7 @@ export default function RecordsTable({
   onCancelAdmission,
   onDownloadRecordPdf,
   onDeleteRecord,
+  onRenewAdmission,
   isLoading
 }) {
   const isAdmissionsLike = activeTab === 'admissions' || activeTab === 'conversions';
@@ -485,6 +487,16 @@ export default function RecordsTable({
                       >
                         <UserMinus size={13} /> Cancel
                       </button>
+
+                      <button
+                        type="button"
+                        className="card-btn"
+                        style={{ background: '#ecfdf5', color: '#047857', borderColor: '#a7f3d0' }}
+                        onClick={() => onRenewAdmission && onRenewAdmission(row)}
+                        title="Renew student admission for new academic session"
+                      >
+                        <Repeat size={13} /> Renew
+                      </button>
                     </>
                   )}
 
@@ -665,6 +677,16 @@ export default function RecordsTable({
                               title="Move admission to Cancelled Log"
                             >
                               <UserMinus size={12} /> Cancel
+                            </button>
+
+                            <button
+                              type="button"
+                              className="btn"
+                              style={{ background: '#ecfdf5', color: '#047857', borderColor: '#a7f3d0' }}
+                              onClick={() => onRenewAdmission && onRenewAdmission(row)}
+                              title="Renew admission into new academic session"
+                            >
+                              <Repeat size={12} /> Renew
                             </button>
                           </>
                         )}

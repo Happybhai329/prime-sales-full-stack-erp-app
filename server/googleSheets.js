@@ -88,15 +88,114 @@ async function getSheetValues(spreadsheetId, sheetName) {
 }
 
 /**
+ * Ensures a sheet tab exists in a spreadsheet. If missing, creates it and writes headers.
+ */
+export async function ensureSheetExists(spreadsheetId, sheetTitle, headers = []) {
+  const { sheets } = getGoogleClients();
+  try {
+    const meta = await sheets.spreadsheets.get({ spreadsheetId });
+    const existing = (meta.data.sheets || []).some(
+      (s) => s.properties.title === sheetTitle
+    );
+
+    if (!existing) {
+      console.log(`[GoogleSheets] Creating new tab "${sheetTitle}" in spreadsheet ${spreadsheetId}...`);
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        requestBody: {
+          requests: [
+            {
+              addSheet: {
+                properties: {
+                  title: sheetTitle
+                }
+              }
+            }
+          ]
+        }
+      });
+
+      if (headers && headers.length > 0) {
+        await sheets.spreadsheets.values.update({
+          spreadsheetId,
+          range: `${sheetTitle}!1:1`,
+          valueInputOption: 'USER_ENTERED',
+          requestBody: {
+            values: [headers]
+          }
+        });
+      }
+      console.log(`[GoogleSheets] Successfully created tab "${sheetTitle}".`);
+    }
+    return true;
+  } catch (err) {
+    console.error(`[GoogleSheets] ensureSheetExists error for ${sheetTitle}:`, err.message);
+    throw err;
+  }
+}
+
+/**
+ * Creates dedicated Google Sheet tabs for a new academic session
+ */
+export async function createSessionSheets(sessionName) {
+  const admissionsSheet = sessionName === '2026' ? 'Admissions' : `Admissions_${sessionName}`;
+  const inquiriesSheet = sessionName === '2026' ? 'Enquiries' : `Enquiries_${sessionName}`;
+  const cancelledSheet = sessionName === '2026' ? 'Cancelled' : `Cancelled_${sessionName}`;
+
+  // Fetch standard base headers from 2026 sheets
+  const [admBase, inqBase, canBase] = await Promise.all([
+    getSheetValues(ADMISSION_SS_ID, ADMISSIONS_SHEET_NAME),
+    getSheetValues(INQUIRY_SS_ID, INQUIRY_SHEET_NAME),
+    getSheetValues(ADMISSION_SS_ID, CANCELLED_SHEET_NAME)
+  ]);
+
+  const admHeaders = admBase.headers.length > 0 ? admBase.headers : [
+    'Student Name', "Father's Name", "Mother's Name", 'Timestamp', 'StudentsId',
+    'Start Session', 'End Session', 'Date of Application', 'DOB', 'Mobile Numbers',
+    'Email', 'Category', "Father's Occupation", 'Defence Service', 'Job Description',
+    'Class', 'Present School', 'Aadhaar Card', 'DOB Certificate', 'Domicile',
+    'Student Photo', 'Caste Certificate', 'Service Certificate', 'Program',
+    'Registration Fee', 'Tuition Fee', 'Other Fees (JSON)', 'Installment Details (JSON)',
+    'Total Amount', 'Discount (%)', 'Scholarship Amount', 'GST (%)', 'Final Cost',
+    'Terms Agreement', 'Advance Check', 'VoucherPDFLink', 'VoucherStatus'
+  ];
+
+  const inqHeaders = inqBase.headers.length > 0 ? inqBase.headers : [
+    'Timestamp', 'S.No.', 'Date', 'Student Name', 'Class', 'Date of Birth',
+    'Category', 'Father Name', 'Father No.', 'Parent Email', 'Mother Name',
+    'Mother No.', 'Father Occupation', 'Complete Address', 'Present School',
+    'Prime Feedback', 'Source', 'Discount (Scholarship)', 'Notes'
+  ];
+
+  const canHeaders = canBase.headers.length > 0 ? canBase.headers : admHeaders;
+
+  // Create new session tabs
+  await Promise.all([
+    ensureSheetExists(ADMISSION_SS_ID, admissionsSheet, admHeaders),
+    ensureSheetExists(ADMISSION_SS_ID, cancelledSheet, canHeaders),
+    ensureSheetExists(INQUIRY_SS_ID, inquiriesSheet, inqHeaders)
+  ]);
+
+  // Ensure voucher columns in new admissions tab
+  await ensureVoucherColumns(admissionsSheet);
+
+  return {
+    admissionsSheet,
+    inquiriesSheet,
+    cancelledSheet
+  };
+}
+
+/**
  * Ensures VoucherStatus and VoucherPDFLink columns exist in the Admissions sheet
  */
-export async function ensureVoucherColumns() {
+export async function ensureVoucherColumns(sheetName = ADMISSIONS_SHEET_NAME) {
   const { sheets } = getGoogleClients();
 
   try {
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId: ADMISSION_SS_ID,
-      range: `${ADMISSIONS_SHEET_NAME}!1:1`
+      range: `${sheetName}!1:1`
     });
 
     const headers = (res.data.values && res.data.values[0]) || [];
@@ -114,30 +213,30 @@ export async function ensureVoucherColumns() {
     if (modified) {
       await sheets.spreadsheets.values.update({
         spreadsheetId: ADMISSION_SS_ID,
-        range: `${ADMISSIONS_SHEET_NAME}!1:1`,
+        range: `${sheetName}!1:1`,
         valueInputOption: 'USER_ENTERED',
         requestBody: { values: [headers] }
       });
-      console.log('[GoogleSheets] Ensured Voucher columns in Admissions sheet.');
+      console.log(`[GoogleSheets] Ensured Voucher columns in ${sheetName} sheet.`);
     }
     return headers;
   } catch (err) {
-    console.error('[GoogleSheets] ensureVoucherColumns error:', err.message);
+    console.error(`[GoogleSheets] ensureVoucherColumns error for ${sheetName}:`, err.message);
     return [];
   }
 }
 
-export async function fetchRemoteAdmissions() {
-  await ensureVoucherColumns();
-  return getSheetValues(ADMISSION_SS_ID, ADMISSIONS_SHEET_NAME);
+export async function fetchRemoteAdmissions(sheetName = ADMISSIONS_SHEET_NAME) {
+  await ensureVoucherColumns(sheetName);
+  return getSheetValues(ADMISSION_SS_ID, sheetName);
 }
 
-export async function fetchRemoteInquiries() {
-  return getSheetValues(INQUIRY_SS_ID, INQUIRY_SHEET_NAME);
+export async function fetchRemoteInquiries(sheetName = INQUIRY_SHEET_NAME) {
+  return getSheetValues(INQUIRY_SS_ID, sheetName);
 }
 
-export async function fetchRemoteCancelled() {
-  return getSheetValues(ADMISSION_SS_ID, CANCELLED_SHEET_NAME);
+export async function fetchRemoteCancelled(sheetName = CANCELLED_SHEET_NAME) {
+  return getSheetValues(ADMISSION_SS_ID, sheetName);
 }
 
 export async function fetchRemotePrograms() {
@@ -171,24 +270,24 @@ export async function updateRemoteRecord(ssId, sheetName, rowNumber, values) {
  * Atomically cancels an admission in Google Sheets:
  * Appends row to Cancelled sheet, then deletes the row from Admissions.
  */
-export async function cancelRemoteAdmission(rowNumber) {
+export async function cancelRemoteAdmission(rowNumber, admissionsSheet = ADMISSIONS_SHEET_NAME, cancelledSheet = CANCELLED_SHEET_NAME) {
   const { sheets } = getGoogleClients();
 
   // 1. Get row from Admissions
   const getRes = await sheets.spreadsheets.values.get({
     spreadsheetId: ADMISSION_SS_ID,
-    range: `${ADMISSIONS_SHEET_NAME}!A${rowNumber}:ZZ${rowNumber}`
+    range: `${admissionsSheet}!A${rowNumber}:ZZ${rowNumber}`
   });
 
   const rowValues = (getRes.data.values && getRes.data.values[0]) || [];
   if (rowValues.length === 0) {
-    throw new Error(`Row ${rowNumber} not found in ${ADMISSIONS_SHEET_NAME}`);
+    throw new Error(`Row ${rowNumber} not found in ${admissionsSheet}`);
   }
 
   // 2. Append row to Cancelled sheet
   await sheets.spreadsheets.values.append({
     spreadsheetId: ADMISSION_SS_ID,
-    range: `${CANCELLED_SHEET_NAME}!A1`,
+    range: `${cancelledSheet}!A1`,
     valueInputOption: 'USER_ENTERED',
     insertDataOption: 'INSERT_ROWS',
     requestBody: {
@@ -201,11 +300,11 @@ export async function cancelRemoteAdmission(rowNumber) {
     spreadsheetId: ADMISSION_SS_ID
   });
   const admSheet = meta.data.sheets.find(
-    (s) => s.properties.title === ADMISSIONS_SHEET_NAME
+    (s) => s.properties.title === admissionsSheet
   );
 
   if (!admSheet) {
-    throw new Error('Admissions sheet not found metadata.');
+    throw new Error(`${admissionsSheet} sheet not found in spreadsheet metadata.`);
   }
 
   const sheetId = admSheet.properties.sheetId;
@@ -235,13 +334,13 @@ export async function cancelRemoteAdmission(rowNumber) {
 /**
  * Updates VoucherStatus and VoucherPDFLink in Admissions sheet
  */
-export async function updateRemoteVoucherStatus(rowNumber, status, pdfUrl) {
+export async function updateRemoteVoucherStatus(rowNumber, status, pdfUrl, sheetName = ADMISSIONS_SHEET_NAME) {
   const { sheets } = getGoogleClients();
 
   // Find column indexes
   const headerRes = await sheets.spreadsheets.values.get({
     spreadsheetId: ADMISSION_SS_ID,
-    range: `${ADMISSIONS_SHEET_NAME}!1:1`
+    range: `${sheetName}!1:1`
   });
 
   const headers = (headerRes.data.values && headerRes.data.values[0]) || [];
@@ -249,14 +348,14 @@ export async function updateRemoteVoucherStatus(rowNumber, status, pdfUrl) {
   const pdfIdx = headers.indexOf(VOUCHER_PDF_LINK_HEADER);
 
   if (statusIdx === -1 || pdfIdx === -1) {
-    await ensureVoucherColumns();
+    await ensureVoucherColumns(sheetName);
   }
 
   const updates = [];
   if (statusIdx !== -1) {
     const colLetter = String.fromCharCode(65 + statusIdx);
     updates.push({
-      range: `${ADMISSIONS_SHEET_NAME}!${colLetter}${rowNumber}`,
+      range: `${sheetName}!${colLetter}${rowNumber}`,
       values: [[status]]
     });
   }
@@ -264,7 +363,7 @@ export async function updateRemoteVoucherStatus(rowNumber, status, pdfUrl) {
   if (pdfIdx !== -1 && pdfUrl != null) {
     const colLetter = String.fromCharCode(65 + pdfIdx);
     updates.push({
-      range: `${ADMISSIONS_SHEET_NAME}!${colLetter}${rowNumber}`,
+      range: `${sheetName}!${colLetter}${rowNumber}`,
       values: [[pdfUrl]]
     });
   }
@@ -424,13 +523,13 @@ export async function uploadVoucherPdf(fileName, pdfBuffer) {
 }
 
 /**
- * Appends a new enquiry row to Google Sheets 'Enquiries'
+ * Appends a new enquiry row to Google Sheets 'Enquiries' (or session sheet)
  */
-export async function appendEnquiry(rowValues) {
+export async function appendEnquiry(rowValues, sheetName = INQUIRY_SHEET_NAME) {
   const { sheets } = getGoogleClients();
   const res = await sheets.spreadsheets.values.append({
     spreadsheetId: INQUIRY_SS_ID,
-    range: `${INQUIRY_SHEET_NAME}!A1`,
+    range: `${sheetName}!A1`,
     valueInputOption: 'USER_ENTERED',
     insertDataOption: 'INSERT_ROWS',
     requestBody: {
@@ -441,13 +540,13 @@ export async function appendEnquiry(rowValues) {
 }
 
 /**
- * Appends a new admission row to Google Sheets 'Admissions'
+ * Appends a new admission row to Google Sheets 'Admissions' (or session sheet)
  */
-export async function appendAdmission(rowValues) {
+export async function appendAdmission(rowValues, sheetName = ADMISSIONS_SHEET_NAME) {
   const { sheets } = getGoogleClients();
   const res = await sheets.spreadsheets.values.append({
     spreadsheetId: ADMISSION_SS_ID,
-    range: `${ADMISSIONS_SHEET_NAME}!A1`,
+    range: `${sheetName}!A1`,
     valueInputOption: 'USER_ENTERED',
     insertDataOption: 'INSERT_ROWS',
     requestBody: {

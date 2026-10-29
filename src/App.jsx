@@ -6,17 +6,32 @@ import RecordsTable from './components/RecordsTable';
 import EditRecordModal from './components/EditRecordModal';
 import VoucherModal from './components/VoucherModal';
 import SetupModal from './components/SetupModal';
+import CreateSessionModal from './components/CreateSessionModal';
+import AdmissionRenewalModal from './components/AdmissionRenewalModal';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('admissions');
   const [stats, setStats] = useState({
-    active: 0,
+    activeAdmissions: 0,
     inquiries: 0,
     cancelled: 0,
     conversions: 0,
     conversionRate: 0
   });
+
+  // Multi-Session Management States
+  const [sessions, setSessions] = useState([]);
+  const [selectedSession, setSelectedSession] = useState(() => {
+    return localStorage.getItem('prime_selected_session') || '2026';
+  });
+  const [currentSession, setCurrentSession] = useState('2026');
+  const [isCreateSessionOpen, setIsCreateSessionOpen] = useState(false);
+  const [renewalModal, setRenewalModal] = useState({
+    isOpen: false,
+    preloadedStudent: null
+  });
+
   const [programs, setPrograms] = useState([]);
   const [feeTypes, setFeeTypes] = useState([]);
   const [syncStatus, setSyncStatus] = useState(null);
@@ -58,29 +73,36 @@ export default function App() {
     }, 4000);
   };
 
-  // Fetch Dashboard Stats & Masters
-  const fetchDashboardOverview = useCallback(async () => {
+  // Fetch Dashboard Stats & Masters (Session Aware)
+  const fetchDashboardOverview = useCallback(async (sessionToFetch = selectedSession) => {
     try {
-      const res = await fetch('/api/dashboard');
+      const res = await fetch(`/api/dashboard?session=${encodeURIComponent(sessionToFetch)}`);
       const data = await res.json();
       if (data.success) {
         setStats(data.stats);
         setPrograms(data.programs || []);
         setFeeTypes(data.feeTypes || []);
         setSyncStatus(data.sync);
+        if (data.sessions && data.sessions.length > 0) {
+          setSessions(data.sessions);
+        }
+        if (data.currentSession?.name) {
+          setCurrentSession(data.currentSession.name);
+        }
       }
     } catch (err) {
       console.error('Failed to load dashboard overview:', err);
     }
-  }, []);
+  }, [selectedSession]);
 
-  // Fetch Records with filters
+  // Fetch Records with filters (Session Aware)
   const fetchRecords = useCallback(
-    async (tab, searchVal, progVal, timeVal, range) => {
+    async (tab, searchVal, progVal, timeVal, range, sessVal = selectedSession) => {
       setIsLoadingRecords(true);
       try {
         const queryParams = new URLSearchParams({
           tab,
+          session: sessVal || '2026',
           search: searchVal || '',
           program: progVal || 'all',
           timeFilter: timeVal || 'all',
@@ -101,18 +123,44 @@ export default function App() {
         setIsLoadingRecords(false);
       }
     },
-    []
+    [selectedSession]
   );
 
   // Initial load
   useEffect(() => {
-    fetchDashboardOverview();
-  }, [fetchDashboardOverview]);
+    fetchDashboardOverview(selectedSession);
+  }, [fetchDashboardOverview, selectedSession]);
 
-  // Load records whenever tab or applied filters change
+  // Load records whenever tab, session, or applied filters change
   useEffect(() => {
-    fetchRecords(activeTab, search, programFilter, timeFilter, appliedDateRange);
-  }, [activeTab, search, programFilter, timeFilter, appliedDateRange, fetchRecords]);
+    fetchRecords(activeTab, search, programFilter, timeFilter, appliedDateRange, selectedSession);
+  }, [activeTab, search, programFilter, timeFilter, appliedDateRange, selectedSession, fetchRecords]);
+
+  // Handle Session Switching
+  const handleSelectSession = (newSession) => {
+    setSelectedSession(newSession);
+    localStorage.setItem('prime_selected_session', newSession);
+    showToast(`Switched to Academic Session ${newSession}`);
+  };
+
+  // Handle New Session Created
+  const handleSessionCreated = (newSessionObj) => {
+    setSessions((prev) => [...prev, newSessionObj]);
+    handleSelectSession(newSessionObj.name);
+    showToast(`Academic Session ${newSessionObj.name} created successfully!`, 'success');
+    fetchDashboardOverview(newSessionObj.name);
+  };
+
+  // Handle Renewal Success
+  const handleRenewSuccess = (data) => {
+    showToast(data.message || 'Student renewed successfully!', 'success');
+    if (data.session && data.session !== selectedSession) {
+      handleSelectSession(data.session);
+    } else {
+      fetchDashboardOverview(selectedSession);
+      fetchRecords(activeTab, search, programFilter, timeFilter, appliedDateRange, selectedSession);
+    }
+  };
 
   // Refresh & Two-Way Sync
   const handleRefresh = async () => {
@@ -125,8 +173,8 @@ export default function App() {
       } else {
         showToast(data.message || 'Sync queued', 'success');
       }
-      await fetchDashboardOverview();
-      await fetchRecords(activeTab, search, programFilter, timeFilter, appliedDateRange);
+      await fetchDashboardOverview(selectedSession);
+      await fetchRecords(activeTab, search, programFilter, timeFilter, appliedDateRange, selectedSession);
     } catch (err) {
       showToast('Sync request failed', 'error');
     } finally {
@@ -159,13 +207,14 @@ export default function App() {
         body: JSON.stringify({
           values,
           ssId: editModal.record?.ssId,
-          sheetName: editModal.record?.sheetName
+          sheetName: editModal.record?.sheetName,
+          session: selectedSession
         })
       });
       const data = await res.json();
       if (data.success) {
         showToast('Record updated successfully');
-        fetchRecords(activeTab, search, programFilter, timeFilter, appliedDateRange);
+        fetchRecords(activeTab, search, programFilter, timeFilter, appliedDateRange, selectedSession);
       } else {
         showToast(data.error || 'Failed to update record', 'error');
       }
@@ -182,13 +231,15 @@ export default function App() {
 
     try {
       const res = await fetch(`/api/admissions/${rowNumber}/cancel`, {
-        method: 'POST'
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session: selectedSession })
       });
       const data = await res.json();
       if (data.success) {
         showToast('Admission moved to Cancelled Log');
-        fetchDashboardOverview();
-        fetchRecords(activeTab, search, programFilter, timeFilter, appliedDateRange);
+        fetchDashboardOverview(selectedSession);
+        fetchRecords(activeTab, search, programFilter, timeFilter, appliedDateRange, selectedSession);
       } else {
         showToast(data.error || 'Failed to cancel admission', 'error');
       }
@@ -202,7 +253,9 @@ export default function App() {
     setVoucherModal((prev) => ({ ...prev, isGenerating: true }));
     try {
       const res = await fetch(`/api/admissions/${rowNumber}/voucher`, {
-        method: 'POST'
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session: selectedSession })
       });
       const data = await res.json();
       if (data.success) {
@@ -215,7 +268,7 @@ export default function App() {
           rowNumber,
           isGenerating: false
         });
-        fetchRecords(activeTab, search, programFilter, timeFilter, appliedDateRange);
+        fetchRecords(activeTab, search, programFilter, timeFilter, appliedDateRange, selectedSession);
       } else {
         showToast(data.error || 'Voucher generation failed', 'error');
         setVoucherModal((prev) => ({ ...prev, isGenerating: false }));
@@ -229,7 +282,7 @@ export default function App() {
   // Preview Voucher Breakup
   const handlePreviewVoucher = async (row) => {
     try {
-      const res = await fetch(`/api/admissions/${row.rowNumber}/voucher-preview`);
+      const res = await fetch(`/api/admissions/${row.rowNumber}/voucher-preview?session=${encodeURIComponent(selectedSession)}`);
       const data = await res.json();
       if (data.success) {
         setVoucherModal({
@@ -254,13 +307,13 @@ export default function App() {
       const res = await fetch(`/api/admissions/${rowNumber}/voucher-status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ status: newStatus, session: selectedSession })
       });
       const data = await res.json();
       if (data.success) {
         showToast(`Voucher status updated to ${newStatus}`);
         setVoucherModal((prev) => ({ ...prev, status: newStatus }));
-        fetchRecords(activeTab, search, programFilter, timeFilter, appliedDateRange);
+        fetchRecords(activeTab, search, programFilter, timeFilter, appliedDateRange, selectedSession);
       } else {
         showToast(data.error || 'Failed to update status', 'error');
       }
@@ -271,7 +324,7 @@ export default function App() {
 
   // Download Single Record Form PDF
   const handleDownloadRecordPdf = (row) => {
-    window.open(`/api/records/${activeTab}/${row.rowNumber}/pdf`, '_blank');
+    window.open(`/api/records/${activeTab}/${row.rowNumber}/pdf?session=${encodeURIComponent(selectedSession)}`, '_blank');
   };
 
   // Permanently Delete Record
@@ -284,13 +337,17 @@ export default function App() {
       const res = await fetch(`/api/records/${activeTab}/${row.rowNumber}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ssId: row.ssId, sheetName: row.sheetName })
+        body: JSON.stringify({
+          ssId: row.ssId,
+          sheetName: row.sheetName,
+          session: selectedSession
+        })
       });
       const data = await res.json();
       if (data.success) {
         showToast('Record deleted successfully');
-        fetchDashboardOverview();
-        fetchRecords(activeTab, search, programFilter, timeFilter, appliedDateRange);
+        fetchDashboardOverview(selectedSession);
+        fetchRecords(activeTab, search, programFilter, timeFilter, appliedDateRange, selectedSession);
       } else {
         showToast(data.error || 'Failed to delete record', 'error');
       }
@@ -309,7 +366,7 @@ export default function App() {
     const data = await res.json();
     if (data.success) {
       showToast('Master item added');
-      fetchDashboardOverview();
+      fetchDashboardOverview(selectedSession);
     } else {
       showToast(data.error || 'Failed to add item', 'error');
     }
@@ -323,7 +380,7 @@ export default function App() {
     const data = await res.json();
     if (data.success) {
       showToast('Master item deleted');
-      fetchDashboardOverview();
+      fetchDashboardOverview(selectedSession);
     } else {
       showToast(data.error || 'Failed to delete item', 'error');
     }
@@ -338,13 +395,18 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      {/* Top Navbar */}
+      {/* Top Navbar with Academic Session Selector & Renewal Button */}
       <TopNavbar
         viewTitle={tabLabels[activeTab]}
         syncStatus={syncStatus}
         onRefresh={handleRefresh}
         onOpenSetup={(type) => setSetupModal({ isOpen: true, type })}
         isRefreshing={isRefreshing}
+        sessions={sessions}
+        selectedSession={selectedSession}
+        onSelectSession={handleSelectSession}
+        onOpenCreateSession={() => setIsCreateSessionOpen(true)}
+        onOpenRenewal={() => setRenewalModal({ isOpen: true, preloadedStudent: null })}
       />
 
       {/* KPI Metric Overview Cards */}
@@ -358,10 +420,12 @@ export default function App() {
       <div className="data-panel">
         <div className="panel-head">
           <div>
-            <p className="panel-kicker">Institutional Data Center</p>
+            <p className="panel-kicker">Institutional Data Center • Session {selectedSession}</p>
             <h2 className="panel-title">{tabLabels[activeTab]}</h2>
           </div>
-          <div className="panel-hint">Touch or swipe horizontally to view all fields</div>
+          <div className="panel-hint">
+            Touch or swipe horizontally to view all fields • Academic Session: {selectedSession}
+          </div>
         </div>
 
         {/* Filter Controls */}
@@ -396,9 +460,29 @@ export default function App() {
           onCancelAdmission={handleCancelAdmission}
           onDownloadRecordPdf={handleDownloadRecordPdf}
           onDeleteRecord={handleDeleteRecord}
+          onRenewAdmission={(record) => setRenewalModal({ isOpen: true, preloadedStudent: record })}
           isLoading={isLoadingRecords}
         />
       </div>
+
+      {/* Create New Academic Session Modal */}
+      <CreateSessionModal
+        isOpen={isCreateSessionOpen}
+        onClose={() => setIsCreateSessionOpen(false)}
+        onSessionCreated={handleSessionCreated}
+        currentSession={currentSession}
+      />
+
+      {/* Student Admission Renewal Modal */}
+      <AdmissionRenewalModal
+        isOpen={renewalModal.isOpen}
+        onClose={() => setRenewalModal({ isOpen: false, preloadedStudent: null })}
+        preloadedStudent={renewalModal.preloadedStudent}
+        sessions={sessions}
+        currentSession={selectedSession}
+        onRenewSuccess={handleRenewSuccess}
+        programs={programs}
+      />
 
       {/* Edit Record Modal with Visual JSON Form Builders */}
       <EditRecordModal

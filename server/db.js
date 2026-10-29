@@ -181,8 +181,19 @@ export async function initDatabase() {
 
 async function initPostgresSchema() {
   const schemaSql = `
+    CREATE TABLE IF NOT EXISTS prime_sessions (
+      id SERIAL PRIMARY KEY,
+      name TEXT UNIQUE NOT NULL,
+      is_current BOOLEAN DEFAULT false,
+      admissions_sheet_name TEXT NOT NULL,
+      inquiries_sheet_name TEXT NOT NULL,
+      cancelled_sheet_name TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS prime_admissions (
-      row_number INT PRIMARY KEY,
+      row_number INT,
+      session_name TEXT DEFAULT '2026',
       student_name TEXT,
       father_name TEXT,
       program TEXT,
@@ -201,26 +212,31 @@ async function initPostgresSchema() {
       installment_details_json TEXT,
       voucher_status TEXT DEFAULT 'Not Given',
       voucher_pdf_link TEXT DEFAULT '',
-      raw_values JSONB
+      raw_values JSONB,
+      PRIMARY KEY (session_name, row_number)
     );
 
     CREATE TABLE IF NOT EXISTS prime_inquiries (
-      row_number INT PRIMARY KEY,
+      row_number INT,
+      session_name TEXT DEFAULT '2026',
       student_name TEXT,
       father_name TEXT,
       mobile TEXT,
       program TEXT,
       inquiry_date TIMESTAMP,
-      raw_values JSONB
+      raw_values JSONB,
+      PRIMARY KEY (session_name, row_number)
     );
 
     CREATE TABLE IF NOT EXISTS prime_cancelled_admissions (
-      row_number INT PRIMARY KEY,
+      row_number INT,
+      session_name TEXT DEFAULT '2026',
       student_name TEXT,
       father_name TEXT,
       program TEXT,
       cancel_date TIMESTAMP,
-      raw_values JSONB
+      raw_values JSONB,
+      PRIMARY KEY (session_name, row_number)
     );
 
     CREATE TABLE IF NOT EXISTS prime_academic_programs (
@@ -240,14 +256,22 @@ async function initPostgresSchema() {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
+    -- Ensure initial default session 2026
+    INSERT INTO prime_sessions (name, is_current, admissions_sheet_name, inquiries_sheet_name, cancelled_sheet_name)
+    VALUES ('2026', true, 'Admissions', 'Enquiries', 'Cancelled')
+    ON CONFLICT (name) DO NOTHING;
+
+    CREATE INDEX IF NOT EXISTS idx_adm_session ON prime_admissions (session_name);
     CREATE INDEX IF NOT EXISTS idx_adm_student ON prime_admissions (student_name);
     CREATE INDEX IF NOT EXISTS idx_adm_mobile ON prime_admissions (mobile);
     CREATE INDEX IF NOT EXISTS idx_adm_program ON prime_admissions (program);
     CREATE INDEX IF NOT EXISTS idx_adm_date ON prime_admissions (admission_date);
 
+    CREATE INDEX IF NOT EXISTS idx_inq_session ON prime_inquiries (session_name);
     CREATE INDEX IF NOT EXISTS idx_inq_student ON prime_inquiries (student_name);
     CREATE INDEX IF NOT EXISTS idx_inq_mobile ON prime_inquiries (mobile);
     CREATE INDEX IF NOT EXISTS idx_inq_date ON prime_inquiries (inquiry_date);
+    CREATE INDEX IF NOT EXISTS idx_cancel_session ON prime_cancelled_admissions (session_name);
 
     -- ==============================================================================
     -- SALES MODULE TABLES (Central Supabase Mumbai)
@@ -346,8 +370,19 @@ async function initPostgresSchema() {
 
 async function initSqliteSchema() {
   const schemaSql = `
+    CREATE TABLE IF NOT EXISTS prime_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      is_current INTEGER DEFAULT 0,
+      admissions_sheet_name TEXT NOT NULL,
+      inquiries_sheet_name TEXT NOT NULL,
+      cancelled_sheet_name TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS prime_admissions (
-      row_number INTEGER PRIMARY KEY,
+      row_number INTEGER,
+      session_name TEXT DEFAULT '2026',
       student_name TEXT,
       father_name TEXT,
       program TEXT,
@@ -366,26 +401,31 @@ async function initSqliteSchema() {
       installment_details_json TEXT,
       voucher_status TEXT DEFAULT 'Not Given',
       voucher_pdf_link TEXT DEFAULT '',
-      raw_values TEXT
+      raw_values TEXT,
+      PRIMARY KEY (session_name, row_number)
     );
 
     CREATE TABLE IF NOT EXISTS prime_inquiries (
-      row_number INTEGER PRIMARY KEY,
+      row_number INTEGER,
+      session_name TEXT DEFAULT '2026',
       student_name TEXT,
       father_name TEXT,
       mobile TEXT,
       program TEXT,
       inquiry_date TEXT,
-      raw_values TEXT
+      raw_values TEXT,
+      PRIMARY KEY (session_name, row_number)
     );
 
     CREATE TABLE IF NOT EXISTS prime_cancelled_admissions (
-      row_number INTEGER PRIMARY KEY,
+      row_number INTEGER,
+      session_name TEXT DEFAULT '2026',
       student_name TEXT,
       father_name TEXT,
       program TEXT,
       cancel_date TEXT,
-      raw_values TEXT
+      raw_values TEXT,
+      PRIMARY KEY (session_name, row_number)
     );
 
     CREATE TABLE IF NOT EXISTS prime_academic_programs (
@@ -405,9 +445,20 @@ async function initSqliteSchema() {
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
 
+    INSERT OR IGNORE INTO prime_sessions (name, is_current, admissions_sheet_name, inquiries_sheet_name, cancelled_sheet_name)
+    VALUES ('2026', 1, 'Admissions', 'Enquiries', 'Cancelled');
+
+    CREATE INDEX IF NOT EXISTS idx_adm_session ON prime_admissions (session_name);
     CREATE INDEX IF NOT EXISTS idx_adm_student ON prime_admissions (student_name);
     CREATE INDEX IF NOT EXISTS idx_adm_mobile ON prime_admissions (mobile);
     CREATE INDEX IF NOT EXISTS idx_adm_program ON prime_admissions (program);
+    CREATE INDEX IF NOT EXISTS idx_adm_date ON prime_admissions (admission_date);
+
+    CREATE INDEX IF NOT EXISTS idx_inq_session ON prime_inquiries (session_name);
+    CREATE INDEX IF NOT EXISTS idx_inq_student ON prime_inquiries (student_name);
+    CREATE INDEX IF NOT EXISTS idx_inq_mobile ON prime_inquiries (mobile);
+    CREATE INDEX IF NOT EXISTS idx_inq_date ON prime_inquiries (inquiry_date);
+    CREATE INDEX IF NOT EXISTS idx_cancel_session ON prime_cancelled_admissions (session_name);
     CREATE INDEX IF NOT EXISTS idx_adm_date ON prime_admissions (admission_date);
 
     CREATE INDEX IF NOT EXISTS idx_inq_student ON prime_inquiries (student_name);

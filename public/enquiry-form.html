@@ -402,8 +402,14 @@
     </header>
 
     <nav class="portal-nav-bar" style="background: #090d16; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); flex-wrap: wrap;">
-      <div style="display: flex; align-items: center; gap: 8px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
         <span style="color: #cbd5e1; font-weight: 700; font-size: 0.88rem; letter-spacing: 0.04em; text-transform: uppercase;">Portal Navigation:</span>
+        <div style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.08); padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.15);">
+          <span style="font-size: 12px; color: #fde68a; font-weight: 700;">🎓 Academic Session:</span>
+          <select id="academicSessionSelect" style="background: transparent; color: #ffffff; border: none; font-size: 13px; font-weight: 800; cursor: pointer; outline: none;">
+            <option value="2026" style="background: #0f172a; color: #ffffff;">Session 2026</option>
+          </select>
+        </div>
       </div>
       <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
         <a href="/" style="color: #cbd5e1; font-size: 13px; font-weight: 600; text-decoration: none; padding: 6px 14px; border-radius: 8px; background: rgba(255,255,255,0.08); display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;">🏠 Sales Dashboard</a>
@@ -582,11 +588,41 @@
       row.querySelector('.btn-remove-note').addEventListener('click', () => row.remove());
     });
 
+    // Academic Session population and synchronization
+    const urlParams = new URLSearchParams(window.location.search);
+    const requestedSession = urlParams.get('session');
+
+    fetch('/api/sessions')
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && d.sessions && d.sessions.length > 0) {
+          const sel = document.getElementById('academicSessionSelect');
+          if (sel) {
+            sel.innerHTML = '';
+            d.sessions.forEach(s => {
+              const opt = document.createElement('option');
+              opt.value = s.name;
+              opt.textContent = `Session ${s.name}${s.is_current ? ' (Active)' : ''}`;
+              opt.style.background = '#0f172a';
+              opt.style.color = '#ffffff';
+              if (requestedSession ? s.name === requestedSession : s.is_current) {
+                opt.selected = true;
+              }
+              sel.appendChild(opt);
+            });
+          }
+        }
+      })
+      .catch(() => {});
+
     async function submitEnquiry() {
       const name = document.getElementById('name').value.trim();
       const studentClass = document.getElementById('studentClass').value.trim();
       const fatherNo = document.getElementById('fatherNo').value.trim();
       const email = document.getElementById('email').value.trim();
+      const sessionVal = document.getElementById('academicSessionSelect')
+        ? document.getElementById('academicSessionSelect').value
+        : (requestedSession || '2026');
 
       if (!name || !studentClass || !fatherNo) {
         showStatus('error', 'Student Name, Class, and Father\'s Contact Number are mandatory fields.');
@@ -600,6 +636,7 @@
       });
 
       const payload = {
+        session: sessionVal,
         date: document.getElementById('date').value,
         name: name,
         studentClass: studentClass,

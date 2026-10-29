@@ -70,9 +70,46 @@ app.head(['/health', '/api/health', '/ping'], (req, res) => {
   res.status(200).end();
 });
 
-// Helper to get cached headers from prime_sync_meta
-async function getCachedHeaders(sheetKey) {
+// Helper to resolve effective academic session
+async function getEffectiveSession(requestedSession) {
+  if (requestedSession && String(requestedSession).trim()) {
+    const sName = String(requestedSession).trim();
+    try {
+      const res = await query('SELECT * FROM prime_sessions WHERE name = $1', [sName]);
+      if (res.rows.length > 0) return res.rows[0];
+    } catch (e) {}
+  }
+  // Try current active session
   try {
+    const curRes = await query('SELECT * FROM prime_sessions WHERE is_current = true LIMIT 1');
+    if (curRes.rows.length > 0) return curRes.rows[0];
+  } catch (e) {}
+  // Fallback to first session or default 2026
+  try {
+    const anyRes = await query('SELECT * FROM prime_sessions ORDER BY id ASC LIMIT 1');
+    if (anyRes.rows.length > 0) return anyRes.rows[0];
+  } catch (e) {}
+
+  return {
+    name: '2026',
+    is_current: true,
+    admissions_sheet_name: 'Admissions',
+    inquiries_sheet_name: 'Enquiries',
+    cancelled_sheet_name: 'Cancelled'
+  };
+}
+
+// Helper to get cached headers from prime_sync_meta
+async function getCachedHeaders(sheetKey, sessionName = '') {
+  try {
+    if (sessionName) {
+      const sRes = await query('SELECT value FROM prime_sync_meta WHERE key = $1', [
+        `${sheetKey}_headers_${sessionName}`
+      ]);
+      if (sRes.rows.length > 0) {
+        return JSON.parse(sRes.rows[0].value);
+      }
+    }
     const res = await query('SELECT value FROM prime_sync_meta WHERE key = $1', [
       `${sheetKey}_headers`
     ]);
@@ -84,8 +121,16 @@ async function getCachedHeaders(sheetKey) {
 }
 
 // Helper to get matched conversion row numbers
-async function getMatchedConversionIds() {
+async function getMatchedConversionIds(sessionName = '') {
   try {
+    if (sessionName) {
+      const sRes = await query('SELECT value FROM prime_sync_meta WHERE key = $1', [
+        `matched_conversions_${sessionName}`
+      ]);
+      if (sRes.rows.length > 0) {
+        return JSON.parse(sRes.rows[0].value);
+      }
+    }
     const res = await query(
       "SELECT value FROM prime_sync_meta WHERE key = 'matched_conversions'"
     );
@@ -97,26 +142,28 @@ async function getMatchedConversionIds() {
 }
 
 // ==============================================================================
-// 1. DASHBOARD OVERVIEW & STATS
+// 1. DASHBOARD OVERVIEW & STATS (SESSION AWARE)
 // ==============================================================================
 app.get('/api/dashboard', async (req, res) => {
   try {
-    const [admCountRes, inqCountRes, canCountRes, progRes, feeRes] =
+    const sessionObj = await getEffectiveSession(req.query.session);
+    const sName = sessionObj.name;
+
+    const [admCountRes, inqCountRes, canCountRes, progRes, feeRes, sessionsRes] =
       await Promise.all([
-        query('SELECT COUNT(*) as count FROM prime_admissions'),
-        query('SELECT COUNT(*) as count FROM prime_inquiries'),
-        query('SELECT COUNT(*) as count FROM prime_cancelled_admissions'),
-        query(
-          'SELECT program_name FROM prime_academic_programs ORDER BY program_name ASC'
-        ),
-        query('SELECT fee_type, amount FROM prime_fee_types ORDER BY fee_type ASC')
+        query('SELECT COUNT(*) as count FROM prime_admissions WHERE session_name = $1', [sName]),
+        query('SELECT COUNT(*) as count FROM prime_inquiries WHERE session_name = $1', [sName]),
+        query('SELECT COUNT(*) as count FROM prime_cancelled_admissions WHERE session_name = $1', [sName]),
+        query('SELECT program_name FROM prime_academic_programs ORDER BY program_name ASC'),
+        query('SELECT fee_type, amount FROM prime_fee_types ORDER BY fee_type ASC'),
+        query('SELECT * FROM prime_sessions ORDER BY id ASC')
       ]);
 
     const activeAdmissions = parseInt(admCountRes.rows[0]?.count || 0, 10);
     const inquiries = parseInt(inqCountRes.rows[0]?.count || 0, 10);
     const cancelled = parseInt(canCountRes.rows[0]?.count || 0, 10);
 
-    const matchedIds = await getMatchedConversionIds();
+    const matchedIds = await getMatchedConversionIds(sName);
     const conversionsCount = matchedIds.length;
     const conversionRate = inquiries
       ? Number(((conversionsCount / inquiries) * 100).toFixed(2))
@@ -138,6 +185,9 @@ app.get('/api/dashboard', async (req, res) => {
         conversions: conversionsCount,
         conversionRate
       },
+      sessions: sessionsRes.rows,
+      selectedSession: sName,
+      currentSession: sessionsRes.rows.find((s) => s.is_current)?.name || '2026',
       programs,
       feeTypes,
       sync: getSyncStatus()
@@ -149,7 +199,85 @@ app.get('/api/dashboard', async (req, res) => {
 });
 
 // ==============================================================================
-// 2. FILTERED RECORDS (SUB-50ms FAST QUERY)
+// 1B. ACADEMIC SESSIONS MANAGEMENT API
+// ==============================================================================
+app.get('/api/sessions', async (req, res) => {
+  try {
+    const sRes = await query('SELECT * FROM prime_sessions ORDER BY id ASC');
+    const currentSession = sRes.rows.find((s) => s.is_current)?.name || '2026';
+    res.json({ success: true, sessions: sRes.rows, currentSession });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/sessions', async (req, res) => {
+  try {
+    const rawName = String(req.body.name || '').trim();
+    if (!rawName) {
+      return res.status(400).json({ success: false, message: 'Session name is required (e.g. 2027 or 2027-2028).' });
+    }
+    const cleanName = rawName.replace(/[^a-zA-Z0-9_-]/g, '');
+    if (!cleanName) {
+      return res.status(400).json({ success: false, message: 'Invalid session name. Use numbers or alphanumeric names.' });
+    }
+
+    const isCurrent = Boolean(req.body.isCurrent);
+
+    // Check if session name already exists
+    const existing = await query('SELECT * FROM prime_sessions WHERE LOWER(name) = LOWER($1)', [cleanName]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ success: false, message: `Session "${cleanName}" already exists.` });
+    }
+
+    // Provision dedicated Google Sheet tabs
+    console.log(`[Sessions] Provisioning Google Sheet tabs for new session "${cleanName}"...`);
+    const sheetConfig = await sheets.createSessionSheets(cleanName);
+
+    if (isCurrent) {
+      await query('UPDATE prime_sessions SET is_current = false');
+    }
+
+    const insertRes = await query(
+      `INSERT INTO prime_sessions (name, is_current, admissions_sheet_name, inquiries_sheet_name, cancelled_sheet_name)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [cleanName, isCurrent, sheetConfig.admissionsSheet, sheetConfig.inquiriesSheet, sheetConfig.cancelledSheet]
+    );
+
+    const newSession = insertRes.rows[0];
+
+    // Trigger sync for new session tabs
+    setTimeout(() => {
+      triggerSync().catch((e) => console.warn('Post-session-creation sync warning:', e.message));
+    }, 500);
+
+    res.json({
+      success: true,
+      session: newSession,
+      message: `Academic Session "${cleanName}" created successfully with dedicated Google Sheet tabs!`
+    });
+  } catch (err) {
+    console.error('Error creating academic session:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.put('/api/sessions/:name/set-current', async (req, res) => {
+  try {
+    const name = req.params.name;
+    await query('UPDATE prime_sessions SET is_current = false');
+    const updateRes = await query('UPDATE prime_sessions SET is_current = true WHERE name = $1 RETURNING *', [name]);
+    if (updateRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: `Session "${name}" not found.` });
+    }
+    res.json({ success: true, session: updateRes.rows[0], message: `Session "${name}" set as current active session.` });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ==============================================================================
+// 2. FILTERED RECORDS (SUB-50ms FAST QUERY, SESSION AWARE)
 // ==============================================================================
 app.get('/api/records', async (req, res) => {
   try {
@@ -159,6 +287,9 @@ app.get('/api/records', async (req, res) => {
     const timeFilter = String(req.query.timeFilter || 'all').trim();
     const fromDate = String(req.query.from || '').trim();
     const toDate = String(req.query.to || '').trim();
+
+    const sessionObj = await getEffectiveSession(req.query.session);
+    const sName = sessionObj.name;
 
     let tableName = 'prime_admissions';
     let headersKey = 'admissions';
@@ -174,17 +305,21 @@ app.get('/api/records', async (req, res) => {
       headersKey = 'admissions';
     }
 
-    const headers = await getCachedHeaders(headersKey);
+    const headers = await getCachedHeaders(headersKey, sName);
 
     let sql = `SELECT * FROM ${tableName}`;
     const params = [];
     const whereClauses = [];
 
+    // Filter by academic session
+    params.push(sName);
+    whereClauses.push(`session_name = $${params.length}`);
+
     // Conversions tab filter
     if (tab === 'conversions') {
-      const matchedIds = await getMatchedConversionIds();
+      const matchedIds = await getMatchedConversionIds(sName);
       if (matchedIds.length === 0) {
-        return res.json({ headers, rows: [], totalCount: 0 });
+        return res.json({ headers, rows: [], totalCount: 0, session: sName });
       }
       params.push(matchedIds);
       // In PG we use = ANY($1), in SQLite fallback we can use IN (...)
@@ -287,10 +422,11 @@ app.get('/api/records', async (req, res) => {
             : process.env.ADMISSION_DB_ID,
         sheetName:
           tab === 'inquiries'
-            ? 'Enquiries'
+            ? sessionObj.inquiries_sheet_name
             : tab === 'cancelled'
-              ? 'Cancelled'
-              : 'Admissions',
+              ? sessionObj.cancelled_sheet_name
+              : sessionObj.admissions_sheet_name,
+        session: sName,
         timestamp: r[dateCol] ? new Date(r[dateCol]).getTime() : null,
         voucherStatus: r.voucher_status,
         voucherPdfLink: r.voucher_pdf_link
@@ -310,7 +446,8 @@ app.get('/api/records', async (req, res) => {
     res.json({
       headers,
       rows: paginatedRows,
-      totalCount
+      totalCount,
+      session: sName
     });
   } catch (err) {
     console.error('Error in /api/records:', err);
@@ -319,13 +456,16 @@ app.get('/api/records', async (req, res) => {
 });
 
 // ==============================================================================
-// 3. UPDATE RECORD (INLINE EDIT & OUTBOX WRITE-BACK)
+// 3. UPDATE RECORD (INLINE EDIT & OUTBOX WRITE-BACK, SESSION AWARE)
 // ==============================================================================
 app.put('/api/records/:tab/:rowNumber', async (req, res) => {
   try {
     const { tab, rowNumber } = req.params;
-    const { values, ssId, sheetName } = req.body;
+    const { values, ssId, sheetName, session } = req.body;
     const rowNum = parseInt(rowNumber, 10);
+
+    const sessionObj = await getEffectiveSession(session);
+    const sName = sessionObj.name;
 
     if (!Array.isArray(values)) {
       return res.status(400).json({ success: false, error: 'values array required' });
@@ -338,18 +478,19 @@ app.put('/api/records/:tab/:rowNumber', async (req, res) => {
           ? 'prime_cancelled_admissions'
           : 'prime_admissions';
 
-    // Update in local DB immediately for sub-30ms responsiveness
+    // Update in DB immediately
     await query(
-      `UPDATE ${tableName} SET raw_values = $1 WHERE row_number = $2`,
-      [JSON.stringify(values), rowNum]
+      `UPDATE ${tableName} SET raw_values = $1 WHERE row_number = $2 AND session_name = $3`,
+      [JSON.stringify(values), rowNum, sName]
     );
 
     // Queue / async write-back to Google Sheets
+    const targetSheet = sheetName || (tab === 'inquiries' ? sessionObj.inquiries_sheet_name : tab === 'cancelled' ? sessionObj.cancelled_sheet_name : sessionObj.admissions_sheet_name);
     sheets
-      .updateRemoteRecord(ssId, sheetName, rowNum, values)
+      .updateRemoteRecord(ssId, targetSheet, rowNum, values)
       .catch((err) =>
         console.error(
-          `[Outbox] Error syncing update to sheet ${sheetName} row ${rowNum}:`,
+          `[Outbox] Error syncing update to sheet ${targetSheet} row ${rowNum}:`,
           err.message
         )
       );
@@ -362,16 +503,18 @@ app.put('/api/records/:tab/:rowNumber', async (req, res) => {
 });
 
 // ==============================================================================
-// 4. CANCEL ADMISSION
+// 4. CANCEL ADMISSION (SESSION AWARE)
 // ==============================================================================
 app.post('/api/admissions/:rowNumber/cancel', async (req, res) => {
   try {
     const rowNum = parseInt(req.params.rowNumber, 10);
+    const sessionObj = await getEffectiveSession(req.body.session || req.query.session);
+    const sName = sessionObj.name;
 
     // 1. Get from admissions
     const admRes = await query(
-      'SELECT * FROM prime_admissions WHERE row_number = $1',
-      [rowNum]
+      'SELECT * FROM prime_admissions WHERE row_number = $1 AND session_name = $2',
+      [rowNum, sName]
     );
     if (admRes.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Admission record not found' });
@@ -381,10 +524,11 @@ app.post('/api/admissions/:rowNumber/cancel', async (req, res) => {
 
     // 2. Insert into cancelled
     await query(
-      `INSERT INTO prime_cancelled_admissions (row_number, student_name, father_name, program, cancel_date, raw_values)
-       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5)
-       ON CONFLICT (row_number) DO NOTHING`,
+      `INSERT INTO prime_cancelled_admissions (session_name, row_number, student_name, father_name, program, cancel_date, raw_values)
+       VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, $6)
+       ON CONFLICT (session_name, row_number) DO UPDATE SET cancel_date = CURRENT_TIMESTAMP`,
       [
+        sName,
         record.row_number,
         record.student_name,
         record.father_name,
@@ -394,11 +538,11 @@ app.post('/api/admissions/:rowNumber/cancel', async (req, res) => {
     );
 
     // 3. Delete from active admissions
-    await query('DELETE FROM prime_admissions WHERE row_number = $1', [rowNum]);
+    await query('DELETE FROM prime_admissions WHERE row_number = $1 AND session_name = $2', [rowNum, sName]);
 
     // 4. Async sync with Google Sheets
     sheets
-      .cancelRemoteAdmission(rowNum)
+      .cancelRemoteAdmission(rowNum, sessionObj.admissions_sheet_name, sessionObj.cancelled_sheet_name)
       .catch((err) =>
         console.error(
           `[Outbox] Error executing cancelAdmission on row ${rowNum}:`,
@@ -414,16 +558,18 @@ app.post('/api/admissions/:rowNumber/cancel', async (req, res) => {
 });
 
 // ==============================================================================
-// 5. VOUCHER PREVIEW & GENERATION
+// 5. VOUCHER PREVIEW & GENERATION (SESSION AWARE)
 // ==============================================================================
 app.get('/api/admissions/:rowNumber/voucher-preview', async (req, res) => {
   try {
     const rowNum = parseInt(req.params.rowNumber, 10);
-    const headers = await getCachedHeaders('admissions');
+    const sessionObj = await getEffectiveSession(req.query.session);
+    const sName = sessionObj.name;
+    const headers = await getCachedHeaders('admissions', sName);
 
     const admRes = await query(
-      'SELECT * FROM prime_admissions WHERE row_number = $1',
-      [rowNum]
+      'SELECT * FROM prime_admissions WHERE row_number = $1 AND session_name = $2',
+      [rowNum, sName]
     );
     if (admRes.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Record not found' });
@@ -451,11 +597,13 @@ app.get('/api/admissions/:rowNumber/voucher-preview', async (req, res) => {
 app.post('/api/admissions/:rowNumber/voucher', async (req, res) => {
   try {
     const rowNum = parseInt(req.params.rowNumber, 10);
-    const headers = await getCachedHeaders('admissions');
+    const sessionObj = await getEffectiveSession(req.body.session || req.query.session);
+    const sName = sessionObj.name;
+    const headers = await getCachedHeaders('admissions', sName);
 
     const admRes = await query(
-      'SELECT * FROM prime_admissions WHERE row_number = $1',
-      [rowNum]
+      'SELECT * FROM prime_admissions WHERE row_number = $1 AND session_name = $2',
+      [rowNum, sName]
     );
     if (admRes.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Record not found' });
@@ -480,21 +628,21 @@ app.post('/api/admissions/:rowNumber/voucher', async (req, res) => {
       console.log(`[Voucher] Uploaded voucher PDF to Google Drive: ${pdfUrl}`);
     } catch (uploadErr) {
       console.warn('[Voucher] Google Drive upload failed, generating local URL fallback:', uploadErr.message);
-      pdfUrl = `/api/admissions/${rowNum}/voucher-download`;
+      pdfUrl = `/api/admissions/${rowNum}/voucher-download?session=${encodeURIComponent(sName)}`;
     }
 
     // Update DB
     await query(
-      `UPDATE prime_admissions SET voucher_status = 'Given', voucher_pdf_link = $1 WHERE row_number = $2`,
-      [pdfUrl, rowNum]
+      `UPDATE prime_admissions SET voucher_status = 'Given', voucher_pdf_link = $1 WHERE row_number = $2 AND session_name = $3`,
+      [pdfUrl, rowNum, sName]
     );
 
     // Async write-back to Google Sheets
     sheets
-      .updateRemoteVoucherStatus(rowNum, 'Given', pdfUrl)
+      .updateRemoteVoucherStatus(rowNum, 'Given', pdfUrl, sessionObj.admissions_sheet_name)
       .catch((err) =>
         console.error(
-          `[Outbox] Error updating voucher status on sheet row ${rowNum}:`,
+          `[Outbox] Error updating voucher status on sheet ${sessionObj.admissions_sheet_name} row ${rowNum}:`,
           err.message
         )
       );
@@ -516,11 +664,13 @@ app.post('/api/admissions/:rowNumber/voucher', async (req, res) => {
 app.get('/api/admissions/:rowNumber/voucher-download', async (req, res) => {
   try {
     const rowNum = parseInt(req.params.rowNumber, 10);
-    const headers = await getCachedHeaders('admissions');
+    const sessionObj = await getEffectiveSession(req.query.session);
+    const sName = sessionObj.name;
+    const headers = await getCachedHeaders('admissions', sName);
 
     const admRes = await query(
-      'SELECT * FROM prime_admissions WHERE row_number = $1',
-      [rowNum]
+      'SELECT * FROM prime_admissions WHERE row_number = $1 AND session_name = $2',
+      [rowNum, sName]
     );
     if (admRes.rows.length === 0) {
       return res.status(404).send('Record not found');
@@ -551,24 +701,26 @@ app.get('/api/admissions/:rowNumber/voucher-download', async (req, res) => {
 app.put('/api/admissions/:rowNumber/voucher-status', async (req, res) => {
   try {
     const rowNum = parseInt(req.params.rowNumber, 10);
-    const { status } = req.body;
+    const { status, session } = req.body;
+    const sessionObj = await getEffectiveSession(session || req.query.session);
+    const sName = sessionObj.name;
     const normalizedStatus =
       String(status).toLowerCase() === 'given' ? 'Given' : 'Not Given';
 
     const admRes = await query(
-      'SELECT voucher_pdf_link FROM prime_admissions WHERE row_number = $1',
-      [rowNum]
+      'SELECT voucher_pdf_link FROM prime_admissions WHERE row_number = $1 AND session_name = $2',
+      [rowNum, sName]
     );
     const pdfUrl = admRes.rows[0]?.voucher_pdf_link || '';
 
     await query(
-      'UPDATE prime_admissions SET voucher_status = $1 WHERE row_number = $2',
-      [normalizedStatus, rowNum]
+      'UPDATE prime_admissions SET voucher_status = $1 WHERE row_number = $2 AND session_name = $3',
+      [normalizedStatus, rowNum, sName]
     );
 
     // Async write-back to Google Sheets
     sheets
-      .updateRemoteVoucherStatus(rowNum, normalizedStatus, pdfUrl)
+      .updateRemoteVoucherStatus(rowNum, normalizedStatus, pdfUrl, sessionObj.admissions_sheet_name)
       .catch((err) =>
         console.error('[Outbox] Voucher status update error:', err.message)
       );
@@ -585,6 +737,8 @@ app.get('/api/records/:tab/:rowNumber/pdf', async (req, res) => {
   try {
     const { tab, rowNumber } = req.params;
     const rowNum = parseInt(rowNumber, 10);
+    const sessionObj = await getEffectiveSession(req.query.session);
+    const sName = sessionObj.name;
 
     const tableName =
       tab === 'inquiries'
@@ -600,10 +754,10 @@ app.get('/api/records/:tab/:rowNumber/pdf', async (req, res) => {
           ? 'cancelled'
           : 'admissions';
 
-    const headers = await getCachedHeaders(headersKey);
+    const headers = await getCachedHeaders(headersKey, sName);
     const dbRes = await query(
-      `SELECT * FROM ${tableName} WHERE row_number = $1`,
-      [rowNum]
+      `SELECT * FROM ${tableName} WHERE row_number = $1 AND session_name = $2`,
+      [rowNum, sName]
     );
     if (dbRes.rows.length === 0) {
       return res.status(404).send('Record not found');
@@ -690,12 +844,14 @@ app.delete('/api/setup/:sheetName/:idOrRow', async (req, res) => {
   }
 });
 
-// Delete individual record row
+// Delete individual record row (session aware)
 app.delete('/api/records/:tab/:rowNumber', async (req, res) => {
   try {
     const { tab, rowNumber } = req.params;
-    const { ssId, sheetName } = req.body;
+    const { ssId, sheetName, session } = req.body;
     const rowNum = parseInt(rowNumber, 10);
+    const sessionObj = await getEffectiveSession(session || req.query.session);
+    const sName = sessionObj.name;
 
     const tableName =
       tab === 'inquiries'
@@ -704,10 +860,11 @@ app.delete('/api/records/:tab/:rowNumber', async (req, res) => {
           ? 'prime_cancelled_admissions'
           : 'prime_admissions';
 
-    await query(`DELETE FROM ${tableName} WHERE row_number = $1`, [rowNum]);
+    await query(`DELETE FROM ${tableName} WHERE row_number = $1 AND session_name = $2`, [rowNum, sName]);
 
+    const targetSheet = sheetName || (tab === 'inquiries' ? sessionObj.inquiries_sheet_name : tab === 'cancelled' ? sessionObj.cancelled_sheet_name : sessionObj.admissions_sheet_name);
     sheets
-      .deleteRemoteRecord(ssId, sheetName, rowNum)
+      .deleteRemoteRecord(ssId, targetSheet, rowNum)
       .catch((err) => console.error('[Outbox] Delete remote record error:', err.message));
 
     res.json({ success: true, message: 'Record deleted successfully' });
@@ -866,13 +1023,17 @@ app.get('/api/public/fee-types', async (req, res) => {
   }
 });
 
-// Public Enquiries list (for Admission Form "Fetch from Enquiry" modal)
+// Public Enquiries list (for Admission Form "Fetch from Enquiry" modal, session aware)
 app.get('/api/public/enquiries', async (req, res) => {
   try {
+    const sessionObj = await getEffectiveSession(req.query.session);
+    const sName = sessionObj.name;
+
     const dbRes = await query(
-      'SELECT row_number, student_name, father_name, mobile, program, raw_values FROM prime_inquiries ORDER BY row_number DESC LIMIT 600'
+      'SELECT row_number, student_name, father_name, mobile, program, raw_values FROM prime_inquiries WHERE session_name = $1 ORDER BY row_number DESC LIMIT 600',
+      [sName]
     );
-    const cachedHeaders = await getCachedHeaders('inquiries');
+    const cachedHeaders = await getCachedHeaders('inquiries', sName);
     const headers = cachedHeaders && cachedHeaders.length > 0 ? cachedHeaders : [
       'Timestamp', 'S.No.', 'Date', 'Student Name', 'Class', 'Date of Birth',
       'Category', 'Father Name', 'Father No.', 'Parent Email', 'Mother Name', 'Mother No.',
@@ -905,20 +1066,22 @@ app.get('/api/public/enquiries', async (req, res) => {
         discountScholarship: getValue('Discount (Scholarship)')
       };
     });
-    res.json({ success: true, data: records });
+    res.json({ success: true, data: records, session: sName });
   } catch (err) {
     console.error('Error in /api/public/enquiries:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// Submit Enquiry Form
+// Submit Enquiry Form (session aware)
 app.post('/api/enquiry-form/submit', async (req, res) => {
   try {
     const data = req.body || {};
     const name = String(data.name || '').trim();
     const studentClass = String(data.studentClass || '').trim();
     const fatherNo = String(data.fatherNo || '').trim();
+    const sessionObj = await getEffectiveSession(data.session);
+    const sName = sessionObj.name;
 
     if (!name || !studentClass || !fatherNo) {
       return res.status(400).json({
@@ -927,11 +1090,14 @@ app.post('/api/enquiry-form/submit', async (req, res) => {
       });
     }
 
-    const countRes = await query('SELECT COALESCE(MAX(row_number), 0) + 1 AS next_row FROM prime_inquiries');
+    const countRes = await query(
+      'SELECT COALESCE(MAX(row_number), 0) + 1 AS next_row FROM prime_inquiries WHERE session_name = $1',
+      [sName]
+    );
     const nextRow = parseInt(countRes.rows[0]?.next_row || 1, 10);
     const nowIso = new Date().toISOString();
 
-    const headers = await getCachedHeaders('inquiries');
+    const headers = await getCachedHeaders('inquiries', sName);
     const inquiryHeaders = headers.length > 0 ? headers : [
       'Timestamp', 'S.No.', 'Date', 'Student Name', 'Class', 'Date of Birth',
       'Category', 'Father Name', 'Father No.', 'Parent Email', 'Mother Name', 'Mother No.',
@@ -965,9 +1131,9 @@ app.post('/api/enquiry-form/submit', async (req, res) => {
 
     // Insert locally into database immediately
     await query(
-      `INSERT INTO prime_inquiries (row_number, student_name, father_name, mobile, program, inquiry_date, raw_values)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       ON CONFLICT (row_number) DO UPDATE SET
+      `INSERT INTO prime_inquiries (session_name, row_number, student_name, father_name, mobile, program, inquiry_date, raw_values)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       ON CONFLICT (session_name, row_number) DO UPDATE SET
         student_name = EXCLUDED.student_name,
         father_name = EXCLUDED.father_name,
         mobile = EXCLUDED.mobile,
@@ -975,6 +1141,7 @@ app.post('/api/enquiry-form/submit', async (req, res) => {
         inquiry_date = EXCLUDED.inquiry_date,
         raw_values = EXCLUDED.raw_values`,
       [
+        sName,
         nextRow,
         name,
         data.fatherName || '',
@@ -993,14 +1160,15 @@ app.post('/api/enquiry-form/submit', async (req, res) => {
     }
 
     // Append to remote Google Sheets asynchronously (safe error isolation)
-    sheets.appendEnquiry(rowValues).catch((err) => {
-      console.warn('[GoogleSheets] Append enquiry warning:', err.message);
+    sheets.appendEnquiry(rowValues, sessionObj.inquiries_sheet_name).catch((err) => {
+      console.warn(`[GoogleSheets] Append enquiry warning on ${sessionObj.inquiries_sheet_name}:`, err.message);
     });
 
     res.json({
       status: 'success',
       sno: nextRow,
-      message: `Enquiry Registered Successfully! Allocated S.No: ${nextRow}`
+      session: sName,
+      message: `Enquiry Registered Successfully in Session ${sName}! Allocated S.No: ${nextRow}`
     });
   } catch (err) {
     console.error('Error submitting enquiry form:', err);
@@ -1008,7 +1176,7 @@ app.post('/api/enquiry-form/submit', async (req, res) => {
   }
 });
 
-// Submit Admission Form
+// Submit Admission Form (session aware)
 app.post('/api/admission-form/submit', async (req, res) => {
   try {
     const { formData, filesData } = req.body || {};
@@ -1019,6 +1187,8 @@ app.post('/api/admission-form/submit', async (req, res) => {
     const studentName = String(formData.studentName || '').trim();
     const fatherName = String(formData.fatherName || '').trim();
     const studentClass = String(formData.class || '').trim();
+    const sessionObj = await getEffectiveSession(formData.session);
+    const sName = sessionObj.name;
 
     if (!studentName || !fatherName || !studentClass) {
       return res.status(400).json({
@@ -1034,12 +1204,15 @@ app.post('/api/admission-form/submit', async (req, res) => {
     const classCode = getStudentClassCode(studentClass);
     const prefix = `${yearYY}${monthMM}${classCode}`;
 
-    // Find highest sequence for prefix
-    const countRes = await query('SELECT COALESCE(MAX(row_number), 0) + 1 AS next_row FROM prime_admissions');
+    // Find highest sequence for prefix in this session
+    const countRes = await query(
+      'SELECT COALESCE(MAX(row_number), 0) + 1 AS next_row FROM prime_admissions WHERE session_name = $1',
+      [sName]
+    );
     const nextRow = parseInt(countRes.rows[0]?.next_row || 1, 10);
     const candidateId = `${prefix}${String(nextRow).padStart(4, '0')}`;
 
-    const headers = await getCachedHeaders('admissions');
+    const headers = await getCachedHeaders('admissions', sName);
     const admissionHeaders = headers.length > 0 ? headers : [
       'Student Name', "Father's Name", "Mother's Name", 'Timestamp', 'StudentsId',
       'Start Session', 'End Session', 'Date of Application', 'DOB', 'Mobile Numbers',
@@ -1110,13 +1283,13 @@ app.post('/api/admission-form/submit', async (req, res) => {
     // Insert locally into database immediately
     await query(
       `INSERT INTO prime_admissions (
-        row_number, student_name, father_name, program, admission_date,
+        session_name, row_number, student_name, father_name, program, admission_date,
         start_session, end_session, mobile, registration_fee, tuition_fee,
         other_fees_json, total_amount, discount_percent, scholarship_amount,
         gst_percent, final_cost, installment_details_json, voucher_status,
         voucher_pdf_link, raw_values
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
-      ON CONFLICT (row_number) DO UPDATE SET
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+      ON CONFLICT (session_name, row_number) DO UPDATE SET
         student_name = EXCLUDED.student_name,
         father_name = EXCLUDED.father_name,
         program = EXCLUDED.program,
@@ -1137,6 +1310,7 @@ app.post('/api/admission-form/submit', async (req, res) => {
         voucher_pdf_link = EXCLUDED.voucher_pdf_link,
         raw_values = EXCLUDED.raw_values`,
       [
+        sName,
         nextRow,
         studentName,
         fatherName,
@@ -1189,15 +1363,16 @@ app.post('/api/admission-form/submit', async (req, res) => {
           if (fileUrls.serviceCert) valuesByHeader['Service Certificate'] = fileUrls.serviceCert;
 
           updatedRowValues = admissionHeaders.map((h) => valuesByHeader[h] != null ? valuesByHeader[h] : '');
-          await query('UPDATE prime_admissions SET raw_values = $1 WHERE row_number = $2', [
+          await query('UPDATE prime_admissions SET raw_values = $1 WHERE row_number = $2 AND session_name = $3', [
             JSON.stringify(updatedRowValues),
-            nextRow
+            nextRow,
+            sName
           ]);
         }
 
-        // Append to remote Google Sheets
-        await sheets.appendAdmission(updatedRowValues);
-        console.log(`[GoogleSheets] Appended admission for ${candidateId} (${studentName})`);
+        // Append to remote Google Sheets tab for this session
+        await sheets.appendAdmission(updatedRowValues, sessionObj.admissions_sheet_name);
+        console.log(`[GoogleSheets] Appended admission for ${candidateId} (${studentName}) on ${sessionObj.admissions_sheet_name}`);
       } catch (asyncErr) {
         console.warn('[Admission] Background Drive/Sheets task warning:', asyncErr.message);
       }
@@ -1207,13 +1382,277 @@ app.post('/api/admission-form/submit', async (req, res) => {
       status: 'success',
       success: true,
       studentId: candidateId,
+      session: sName,
       pdfUrl: `/api/admission-form/pdf/${candidateId}`,
       emailSent: Boolean(parentEmail),
-      message: `Admission Submitted Successfully! Student ID: ${candidateId}`
+      message: `Admission Submitted Successfully in Session ${sName}! Student ID: ${candidateId}`
     });
   } catch (err) {
     console.error('Error submitting admission form:', err);
     res.status(500).json({ status: 'error', message: 'Admission save failed: ' + err.message });
+  }
+});
+
+// ==============================================================================
+// 8.2. ADMISSION RENEWAL APIS
+// ==============================================================================
+
+// Search previous admissions across sessions for renewal
+app.get('/api/admissions/search-previous', async (req, res) => {
+  try {
+    const q = String(req.query.q || '').trim();
+    if (!q || q.length < 2) {
+      return res.json({ success: true, admissions: [] });
+    }
+
+    const searchPattern = `%${q}%`;
+    const searchRes = await query(
+      `SELECT row_number, session_name, student_name, father_name, mobile, program,
+              admission_date, start_session, end_session, registration_fee, tuition_fee,
+              other_fees_json, total_amount, discount_percent, scholarship_amount,
+              gst_percent, final_cost, installment_details_json, voucher_status,
+              voucher_pdf_link, raw_values
+       FROM prime_admissions
+       WHERE student_name ILIKE $1
+          OR father_name ILIKE $1
+          OR mobile ILIKE $1
+          OR CAST(raw_values AS text) ILIKE $1
+       ORDER BY row_number DESC
+       LIMIT 50`,
+      [searchPattern]
+    );
+
+    res.json({ success: true, admissions: searchRes.rows });
+  } catch (err) {
+    console.error('Error in /api/admissions/search-previous:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Renew student admission into target session with editable details
+app.post('/api/admissions/renew', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const {
+      targetSession,
+      oldSession,
+      oldRowNumber,
+      studentName,
+      fatherName,
+      motherName,
+      dob,
+      mobile,
+      email,
+      caste,
+      fatherOccupation,
+      defenceService,
+      jobDescription,
+      studentClass,
+      presentSchool,
+      completeAddress,
+      program,
+      startSession,
+      endSession,
+      registrationFee,
+      tuitionFee,
+      otherFees,
+      installmentDetails,
+      totalAmount,
+      discountPercent,
+      scholarshipAmount,
+      gstPercent,
+      finalCost,
+      termsAgreement
+    } = body;
+
+    if (!targetSession || !studentName || !studentClass) {
+      return res.status(400).json({
+        success: false,
+        error: 'Target session, Student Name, and Class are mandatory for renewal.'
+      });
+    }
+
+    const targetSessionObj = await getEffectiveSession(targetSession);
+    const targetSName = targetSessionObj.name;
+
+    // Allocate next row_number in target session
+    const nextRowRes = await query(
+      'SELECT COALESCE(MAX(row_number), 0) + 1 AS next_row FROM prime_admissions WHERE session_name = $1',
+      [targetSName]
+    );
+    const nextRow = parseInt(nextRowRes.rows[0]?.next_row || 1, 10);
+
+    // Generate renewed student ID
+    const appDate = new Date();
+    const yearYY = String(appDate.getFullYear()).slice(-2);
+    const monthMM = String(appDate.getMonth() + 1).padStart(2, '0');
+    const classCode = getStudentClassCode(studentClass);
+    const prefix = `${yearYY}${monthMM}${classCode}`;
+    const renewedStudentId = `${prefix}${String(nextRow).padStart(4, '0')}`;
+
+    // Get headers for target session
+    const headers = await getCachedHeaders('admissions', targetSName);
+    const admissionHeaders = headers.length > 0 ? headers : [
+      'Student Name', "Father's Name", "Mother's Name", 'Timestamp', 'StudentsId',
+      'Start Session', 'End Session', 'Date of Application', 'DOB', 'Mobile Numbers',
+      'Email', 'Category', "Father's Occupation", 'Defence Service', 'Job Description',
+      'Class', 'Present School', 'Aadhaar Card', 'DOB Certificate', 'Domicile',
+      'Student Photo', 'Caste Certificate', 'Service Certificate', 'Program',
+      'Registration Fee', 'Tuition Fee', 'Other Fees (JSON)', 'Installment Details (JSON)',
+      'Total Amount', 'Discount (%)', 'Scholarship Amount', 'GST (%)', 'Final Cost',
+      'Terms Agreement', 'Advance Check', 'VoucherPDFLink', 'VoucherStatus', 'Caste',
+      'Parent Email', 'Complete Address'
+    ];
+
+    const mobileStr = typeof mobile === 'string' && (mobile.startsWith('[') || mobile.includes(','))
+      ? mobile
+      : JSON.stringify([mobile].filter(Boolean));
+
+    const otherFeesJson = typeof otherFees === 'string' ? otherFees : JSON.stringify(otherFees || []);
+    const installmentsJson = typeof installmentDetails === 'string'
+      ? installmentDetails
+      : JSON.stringify(installmentDetails || { installments: [] });
+
+    const valuesByHeader = {
+      'Timestamp': new Date().toLocaleString('en-IN'),
+      'StudentsId': renewedStudentId,
+      'Start Session': startSession || `${targetSName}-04-01`,
+      'End Session': endSession || `${parseInt(targetSName, 10) + 1 || ''}-03-31`,
+      'Date of Application': new Date().toISOString().split('T')[0],
+      'Application Date': new Date().toISOString().split('T')[0],
+      'Student Name': studentName,
+      "Father's Name": fatherName || '',
+      'Father Name': fatherName || '',
+      'DOB': dob || '',
+      'Mobile Numbers': mobileStr,
+      'Mobile Number': mobileStr,
+      'Email': email || '',
+      'Parent Email': email || '',
+      "Mother's Name": motherName || '',
+      'Mother Name': motherName || '',
+      'Category': caste || '',
+      'Caste': caste || '',
+      "Father's Occupation": fatherOccupation || '',
+      'Defence Service': defenceService || '',
+      'Job Description': jobDescription || '',
+      'Class': studentClass,
+      'Present School': presentSchool || '',
+      'Complete Address': completeAddress || '',
+      'Program': program || '',
+      'Registration Fee': registrationFee || 0,
+      'Tuition Fee': tuitionFee || 0,
+      'Other Fees (JSON)': otherFeesJson,
+      'Installment Details (JSON)': installmentsJson,
+      'Total Amount': totalAmount || 0,
+      'Discount (%)': discountPercent || 0,
+      'Scholarship Amount': scholarshipAmount || 0,
+      'GST (%)': gstPercent || 0,
+      'Final Cost': finalCost || 0,
+      'Terms Agreement': termsAgreement || 'Agreed (Renewed)',
+      'Advance Check': '',
+      'VoucherStatus': 'Not Given',
+      'VoucherPDFLink': '',
+      'Student Photo': '',
+      'Aadhaar Card': '',
+      'DOB Certificate': '',
+      'Domicile': '',
+      'Caste Certificate': '',
+      'Service Certificate': ''
+    };
+
+    // If renewing from an existing record, preserve documents/photos if available
+    if (oldRowNumber && oldSession) {
+      try {
+        const oldAdm = await query(
+          'SELECT raw_values FROM prime_admissions WHERE row_number = $1 AND session_name = $2',
+          [oldRowNumber, oldSession]
+        );
+        if (oldAdm.rows.length > 0) {
+          const oldVals = Array.isArray(oldAdm.rows[0].raw_values)
+            ? oldAdm.rows[0].raw_values
+            : JSON.parse(oldAdm.rows[0].raw_values || '[]');
+          const oldHeaders = await getCachedHeaders('admissions', oldSession);
+          ['Student Photo', 'Aadhaar Card', 'DOB Certificate', 'Domicile', 'Caste Certificate', 'Service Certificate'].forEach(docField => {
+            const idx = oldHeaders.indexOf(docField);
+            if (idx !== -1 && oldVals[idx]) {
+              valuesByHeader[docField] = oldVals[idx];
+            }
+          });
+        }
+      } catch (copyErr) {
+        console.warn('[Renew] Could not copy prior docs:', copyErr.message);
+      }
+    }
+
+    const rowValues = admissionHeaders.map(h => valuesByHeader[h] != null ? valuesByHeader[h] : '');
+
+    // Insert into prime_admissions
+    await query(
+      `INSERT INTO prime_admissions (
+        session_name, row_number, student_name, father_name, program, admission_date,
+        start_session, end_session, mobile, registration_fee, tuition_fee,
+        other_fees_json, total_amount, discount_percent, scholarship_amount,
+        gst_percent, final_cost, installment_details_json, voucher_status,
+        voucher_pdf_link, raw_values
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+      ON CONFLICT (session_name, row_number) DO UPDATE SET
+        student_name = EXCLUDED.student_name,
+        father_name = EXCLUDED.father_name,
+        program = EXCLUDED.program,
+        admission_date = EXCLUDED.admission_date,
+        raw_values = EXCLUDED.raw_values`,
+      [
+        targetSName,
+        nextRow,
+        studentName,
+        fatherName || '',
+        program || '',
+        new Date(),
+        startSession || '',
+        endSession || '',
+        mobileStr,
+        parseFloat(registrationFee || 0),
+        parseFloat(tuitionFee || 0),
+        otherFeesJson,
+        parseFloat(totalAmount || 0),
+        parseFloat(discountPercent || 0),
+        parseFloat(scholarshipAmount || 0),
+        parseFloat(gstPercent || 0),
+        parseFloat(finalCost || 0),
+        installmentsJson,
+        'Not Given',
+        '',
+        JSON.stringify(rowValues)
+      ]
+    );
+
+    // Append to remote Google Sheets tab for target session
+    sheets
+      .appendAdmission(rowValues, targetSessionObj.admissions_sheet_name)
+      .catch((sheetErr) => {
+        console.warn(`[GoogleSheets] Append renewed admission error on ${targetSessionObj.admissions_sheet_name}:`, sheetErr.message);
+      });
+
+    // Send Renewal Confirmation Email if email provided
+    if (email) {
+      sendAdmissionConfirmationEmail(email, {
+        studentName,
+        studentId: renewedStudentId,
+        className: studentClass,
+        program: `${program || ''} (Renewed for Session ${targetSName})`
+      }).catch(mailErr => console.warn('[Renew Email Warning]:', mailErr.message));
+    }
+
+    res.json({
+      success: true,
+      message: `Student ${studentName} successfully renewed for Academic Session ${targetSName}!`,
+      newStudentId: renewedStudentId,
+      newRowNumber: nextRow,
+      session: targetSName
+    });
+  } catch (err) {
+    console.error('Error in /api/admissions/renew:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
