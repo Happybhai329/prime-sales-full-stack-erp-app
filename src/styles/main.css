@@ -1052,7 +1052,8 @@ body {
 /* ==============================================================================
    7. MODAL DIALOGS
    ============================================================================== */
-.modal-overlay {
+.modal-overlay,
+.modal-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.65);
@@ -1060,12 +1061,13 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 1100;
   padding: 16px;
   overflow-y: auto;
 }
 
-.modal-content {
+.modal-content,
+.modal-card {
   background: white;
   border-radius: 22px;
   max-width: 900px;
@@ -1076,6 +1078,19 @@ body {
   box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.3);
   border: 1px solid var(--border-light);
   position: relative;
+}
+
+.btn-close {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: color 0.16s ease;
+}
+
+.btn-close:hover {
+  color: var(--text-main);
 }
 
 .modal-header {

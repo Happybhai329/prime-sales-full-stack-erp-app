@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Calendar, PlusCircle, Check, Loader2 } from 'lucide-react';
+import { X, Calendar, PlusCircle, Loader2 } from 'lucide-react';
 
 export default function CreateSessionModal({ isOpen, onClose, onSessionCreated, currentSession }) {
   const [sessionName, setSessionName] = useState('');
@@ -46,26 +46,38 @@ export default function CreateSessionModal({ isOpen, onClose, onSessionCreated, 
   };
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal-card" style={{ maxWidth: 520 }}>
-        <div className="modal-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ background: '#ede9fe', padding: 8, borderRadius: 10, color: '#6d28d9' }}>
-              <Calendar size={20} />
+    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1100 }}>
+      <div
+        className="modal-content"
+        onClick={(e) => e.stopPropagation()}
+        style={{ maxWidth: 540, width: '100%', padding: '24px 28px' }}
+      >
+        <div className="modal-header" style={{ marginBottom: 18, paddingBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              background: '#ede9fe',
+              padding: 10,
+              borderRadius: 12,
+              color: '#6d28d9',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Calendar size={22} />
             </div>
             <div>
-              <h2 className="modal-title">Create New Academic Session</h2>
-              <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>
+              <h3 className="modal-title" style={{ fontSize: 19, margin: 0 }}>Create New Academic Session</h3>
+              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b' }}>
                 Provision dedicated database records and Google Sheet tabs
               </p>
             </div>
           </div>
-          <button className="btn-close" onClick={onClose} disabled={isLoading}>
-            <X size={18} />
+          <button className="modal-close" onClick={onClose} disabled={isLoading} type="button">
+            <X size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ padding: '20px' }}>
+        <form onSubmit={handleSubmit} style={{ marginTop: 8 }}>
           {error && (
             <div style={{
               background: '#fef2f2',
@@ -92,16 +104,18 @@ export default function CreateSessionModal({ isOpen, onClose, onSessionCreated, 
               disabled={isLoading}
               style={{
                 width: '100%',
-                padding: '10px 12px',
+                padding: '11px 14px',
                 borderRadius: 8,
-                border: '1px solid #cbd5e1',
+                border: '1.5px solid #cbd5e1',
                 fontSize: 14,
                 fontWeight: 600,
-                outline: 'none'
+                outline: 'none',
+                boxSizing: 'border-box'
               }}
+              autoFocus
               required
             />
-            <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+            <div style={{ fontSize: 11, color: '#64748b', marginTop: 5 }}>
               Current academic session is <strong>{currentSession || '2026'}</strong>.
             </div>
           </div>
@@ -109,9 +123,9 @@ export default function CreateSessionModal({ isOpen, onClose, onSessionCreated, 
           <div style={{
             background: '#f8fafc',
             border: '1px solid #e2e8f0',
-            borderRadius: 8,
+            borderRadius: 10,
             padding: '12px 14px',
-            marginBottom: 20
+            marginBottom: 18
           }}>
             <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', margin: 0 }}>
               <input
@@ -124,7 +138,7 @@ export default function CreateSessionModal({ isOpen, onClose, onSessionCreated, 
               <div style={{ fontSize: 13, color: '#334155' }}>
                 <strong>Set as active default session</strong>
                 <p style={{ margin: '2px 0 0', fontSize: 11, color: '#64748b' }}>
-                  New admissions, inquiries, and public forms will default to this session.
+                  New admissions, inquiries, and public intake forms will automatically default to this session.
                 </p>
               </div>
             </label>
@@ -133,27 +147,27 @@ export default function CreateSessionModal({ isOpen, onClose, onSessionCreated, 
           <div style={{
             background: '#f5f3ff',
             border: '1px dashed #c4b5fd',
-            borderRadius: 8,
-            padding: '10px 14px',
+            borderRadius: 10,
+            padding: '12px 14px',
             marginBottom: 20,
             fontSize: 12,
             color: '#5b21b6'
           }}>
             ℹ️ Creating this session will create separate tabs in Google Sheets:
-            <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+            <ul style={{ margin: '6px 0 0 16px', padding: 0 }}>
               <li><code>Admissions_{sessionName || 'XXXX'}</code></li>
               <li><code>Enquiries_{sessionName || 'XXXX'}</code></li>
               <li><code>Cancelled_{sessionName || 'XXXX'}</code></li>
             </ul>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 6 }}>
             <button
               type="button"
               className="btn btn-secondary"
               onClick={onClose}
               disabled={isLoading}
-              style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13 }}
+              style={{ padding: '9px 18px', borderRadius: 8, fontSize: 13 }}
             >
               Cancel
             </button>
@@ -162,12 +176,12 @@ export default function CreateSessionModal({ isOpen, onClose, onSessionCreated, 
               className="btn btn-primary"
               disabled={isLoading || !sessionName.trim()}
               style={{
-                padding: '8px 18px',
+                padding: '9px 20px',
                 borderRadius: 8,
                 fontSize: 13,
                 display: 'flex',
                 alignItems: 'center',
-                gap: 6,
+                gap: 8,
                 background: '#7c3aed',
                 borderColor: '#6d28d9',
                 color: '#fff',
@@ -176,12 +190,12 @@ export default function CreateSessionModal({ isOpen, onClose, onSessionCreated, 
             >
               {isLoading ? (
                 <>
-                  <Loader2 size={14} className="animate-spin" />
+                  <Loader2 size={15} className="animate-spin" />
                   <span>Provisioning Sheets...</span>
                 </>
               ) : (
                 <>
-                  <PlusCircle size={14} />
+                  <PlusCircle size={15} />
                   <span>Create Session</span>
                 </>
               )}

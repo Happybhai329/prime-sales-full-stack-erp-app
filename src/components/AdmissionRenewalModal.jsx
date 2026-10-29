@@ -311,23 +311,27 @@ export default function AdmissionRenewalModal({
   if (!isOpen) return null;
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal-card" style={{ maxWidth: 840, maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1100 }}>
+      <div
+        className="modal-content"
+        onClick={(e) => e.stopPropagation()}
+        style={{ maxWidth: 840, width: '100%', maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}
+      >
         {/* Header */}
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ background: '#ecfdf5', padding: 8, borderRadius: 10, color: '#059669' }}>
+            <div style={{ background: '#ecfdf5', padding: 8, borderRadius: 10, color: '#059669', display: 'flex' }}>
               <RefreshCw size={20} />
             </div>
             <div>
-              <h2 className="modal-title">Student Admission Renewal</h2>
+              <h3 className="modal-title" style={{ fontSize: 19 }}>Student Admission Renewal</h3>
               <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>
                 Re-enroll student into a new academic session with updated class & fee structure
               </p>
             </div>
           </div>
-          <button className="btn-close" onClick={onClose} disabled={isSubmitting}>
-            <X size={18} />
+          <button className="modal-close" onClick={onClose} disabled={isSubmitting} type="button">
+            <X size={20} />
           </button>
         </div>
 
