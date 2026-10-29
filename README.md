@@ -57,6 +57,9 @@ Historically reliant on slow, fragile Google Sheets and Google Apps Script trigg
 - **Complete Biographical Capture**: Detailed student records, target academic program, parent contact info, defense service status, category/caste, and verification document links.
 - **Sequential Student ID Generation**: Concurrency-safe atomic student ID counter generating standardized institutional registration numbers (`YYMMCCXXXX`).
 - **Student Status Transitions**: Manage `ACTIVE` and `CANCELLED` student states with full audit trail logging.
+- **Multi-Session Management & Student Renewal**: Streamlined admission renewals enabling one-click rollover of existing students into new academic sessions (`2025-26`, `2026-27`) while maintaining independent historical records and ledger balances.
+- **Isolated Academic Session Tabs**: Dedicated Google Sheet sync tabs per academic intake session, completely eliminating cross-session data overwrites.
+- **Cross-Engine Compatibility**: Zero-dependency SQLite fallback alongside cloud PostgreSQL 16, ensuring instant local testing and robust production operations.
 
 ### 📞 Sales Inquiry & Lead Funnel
 - **Inquiry Capture**: Log incoming student leads, mobile numbers, and target programs.
