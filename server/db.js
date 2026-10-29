@@ -95,9 +95,11 @@ export async function query(sql, params = []) {
   }
 
   return new Promise((resolve, reject) => {
-    // Transform $1, $2, ... placeholders to ?
-    let paramIndex = 1;
-    const transformedSql = sql.replace(/\$\d+/g, () => '?');
+    // Transform PostgreSQL syntax ($1, $2, ILIKE, ::text) into SQLite compatible syntax
+    const transformedSql = sql
+      .replace(/\bILIKE\b/gi, 'LIKE')
+      .replace(/::text/gi, '')
+      .replace(/\$\d+/g, () => '?');
 
     const cleanSql = transformedSql.trim();
     const isSelect = cleanSql.toUpperCase().startsWith('SELECT') || cleanSql.toUpperCase().startsWith('PRAGMA');
@@ -448,17 +450,9 @@ async function initSqliteSchema() {
     INSERT OR IGNORE INTO prime_sessions (name, is_current, admissions_sheet_name, inquiries_sheet_name, cancelled_sheet_name)
     VALUES ('2026', 1, 'Admissions', 'Enquiries', 'Cancelled');
 
-    CREATE INDEX IF NOT EXISTS idx_adm_session ON prime_admissions (session_name);
     CREATE INDEX IF NOT EXISTS idx_adm_student ON prime_admissions (student_name);
     CREATE INDEX IF NOT EXISTS idx_adm_mobile ON prime_admissions (mobile);
     CREATE INDEX IF NOT EXISTS idx_adm_program ON prime_admissions (program);
-    CREATE INDEX IF NOT EXISTS idx_adm_date ON prime_admissions (admission_date);
-
-    CREATE INDEX IF NOT EXISTS idx_inq_session ON prime_inquiries (session_name);
-    CREATE INDEX IF NOT EXISTS idx_inq_student ON prime_inquiries (student_name);
-    CREATE INDEX IF NOT EXISTS idx_inq_mobile ON prime_inquiries (mobile);
-    CREATE INDEX IF NOT EXISTS idx_inq_date ON prime_inquiries (inquiry_date);
-    CREATE INDEX IF NOT EXISTS idx_cancel_session ON prime_cancelled_admissions (session_name);
     CREATE INDEX IF NOT EXISTS idx_adm_date ON prime_admissions (admission_date);
 
     CREATE INDEX IF NOT EXISTS idx_inq_student ON prime_inquiries (student_name);
@@ -553,11 +547,32 @@ async function initSqliteSchema() {
 
   // SQLite multiple statements execution
   return new Promise((resolve, reject) => {
-    sqliteDb.exec(schemaSql, (err) => {
+    sqliteDb.exec(schemaSql, async (err) => {
       if (err) {
         console.error('[DB] Failed to initialize SQLite schema:', err);
         return reject(err);
       }
+
+      // Ensure session_name column exists if SQLite DB was created prior
+      const alterCols = [
+        "ALTER TABLE prime_admissions ADD COLUMN session_name TEXT DEFAULT '2026'",
+        "ALTER TABLE prime_inquiries ADD COLUMN session_name TEXT DEFAULT '2026'",
+        "ALTER TABLE prime_cancelled_admissions ADD COLUMN session_name TEXT DEFAULT '2026'"
+      ];
+      for (const sql of alterCols) {
+        await new Promise((res) => sqliteDb.run(sql, () => res()));
+      }
+
+      // Safe index creation
+      const postMigrateSql = [
+        "CREATE INDEX IF NOT EXISTS idx_adm_session ON prime_admissions (session_name)",
+        "CREATE INDEX IF NOT EXISTS idx_inq_session ON prime_inquiries (session_name)",
+        "CREATE INDEX IF NOT EXISTS idx_cancel_session ON prime_cancelled_admissions (session_name)"
+      ];
+      for (const sql of postMigrateSql) {
+        await new Promise((res) => sqliteDb.run(sql, () => res()));
+      }
+
       console.log('[DB] SQLite schema initialized successfully.');
       resolve();
     });

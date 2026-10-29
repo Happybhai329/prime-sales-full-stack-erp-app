@@ -1413,10 +1413,10 @@ app.get('/api/admissions/search-previous', async (req, res) => {
               gst_percent, final_cost, installment_details_json, voucher_status,
               voucher_pdf_link, raw_values
        FROM prime_admissions
-       WHERE student_name ILIKE $1
-          OR father_name ILIKE $1
-          OR mobile ILIKE $1
-          OR CAST(raw_values AS text) ILIKE $1
+       WHERE LOWER(student_name) LIKE LOWER($1)
+          OR LOWER(father_name) LIKE LOWER($1)
+          OR mobile LIKE $1
+          OR CAST(raw_values AS text) LIKE $1
        ORDER BY row_number DESC
        LIMIT 50`,
       [searchPattern]
