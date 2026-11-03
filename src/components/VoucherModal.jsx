@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, FileCheck, ExternalLink, CheckCircle, XCircle } from 'lucide-react';
+import { formatDisplayDate } from '../utils/dateUtils';
 
 export default function VoucherModal({
   isOpen,
@@ -59,7 +60,7 @@ export default function VoucherModal({
             </div>
             <div className="voucher-kv-row">
               <span>Date of Admission:</span>
-              <strong>{voucherData.admissionDate || '-'}</strong>
+              <strong>{formatDisplayDate(voucherData.admissionDate) || '-'}</strong>
             </div>
             {voucherData.session && (
               <div className="voucher-kv-row">
@@ -146,7 +147,7 @@ export default function VoucherModal({
                 <tbody>
                   {voucherData.installments.map((inst, i) => (
                     <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '6px 8px' }}>{inst.date || '-'}</td>
+                      <td style={{ padding: '6px 8px' }}>{formatDisplayDate(inst.date) || '-'}</td>
                       <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 700 }}>
                         {inst.amountDisplay}
                       </td>

@@ -2423,7 +2423,7 @@
             <tr>
               <td>
                 <strong>${escapeHtml(record.studentName || '-')}</strong>
-                <div class="enquiry-meta">${escapeHtml(record.dob ? 'DOB: ' + record.dob : 'DOB not available')}</div>
+                <div class="enquiry-meta">${escapeHtml(record.dob ? 'DOB: ' + formatDisplayDate(record.dob) : 'DOB not available')}</div>
               </td>
               <td>
                 ${escapeHtml(record.fatherName || '-')}
@@ -2687,6 +2687,18 @@
         }
 
         return '';
+      }
+
+      function formatDisplayDate(value) {
+        const cleaned = getSafeEnquiryValue(value);
+        if (!cleaned || cleaned === '-') return '';
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(cleaned)) return cleaned;
+        const norm = normalizeDateForInput(cleaned);
+        if (norm) {
+          const parts = norm.split('-');
+          return parts[2] + '/' + parts[1] + '/' + parts[0];
+        }
+        return cleaned;
       }
 
       function getSafeEnquiryValue(value) {

@@ -49,17 +49,69 @@ export function formatVoucherPercent(value) {
 
 export function formatVoucherDate(value) {
   const text = String(value == null ? '' : value).trim();
-  if (!text) return '';
+  if (!text || text === '-') return '';
+  if (/^\d{1,10}$/.test(text)) return text;
+  if (/^\d{4}\s*[-–/]\s*\d{4}$/.test(text)) return text;
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(text)) return text;
 
-  let match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (match) return `${match[3]}/${match[2]}/${match[1]}`;
+  let match = text.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})(?:[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?(Z|[+-]\d{2}:?\d{2})?)?$/);
+  if (match) {
+    if (match[4] != null || match[7] != null) {
+      const d = new Date(text);
+      if (!isNaN(d.getTime())) {
+        try {
+          const parts = new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'Asia/Kolkata',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+          }).formatToParts(d);
+          const dd = parts.find((p) => p.type === 'day')?.value;
+          const mm = parts.find((p) => p.type === 'month')?.value;
+          const yyyy = parts.find((p) => p.type === 'year')?.value;
+          if (dd && mm && yyyy) return `${dd}/${mm}/${yyyy}`;
+        } catch (e) {}
+      }
+    }
+    return `${match[3].padStart(2, '0')}/${match[2].padStart(2, '0')}/${match[1]}`;
+  }
 
-  match = text.match(/^(\d{2})[-.](\d{2})[-.](\d{4})$/);
-  if (match) return `${match[1]}/${match[2]}/${match[3]}`;
+  match = text.match(/^(\d{1,2})[-.](\d{1,2})[-.](\d{4})/);
+  if (match) return `${match[1].padStart(2, '0')}/${match[2].padStart(2, '0')}/${match[3]}`;
+
+  match = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (match) {
+    let p1 = parseInt(match[1], 10);
+    let p2 = parseInt(match[2], 10);
+    let yyyy = match[3];
+    let dd, mm;
+    if (p1 > 12) {
+      dd = String(p1).padStart(2, '0');
+      mm = String(p2).padStart(2, '0');
+    } else if (p2 > 12) {
+      dd = String(p2).padStart(2, '0');
+      mm = String(p1).padStart(2, '0');
+    } else {
+      dd = String(p1).padStart(2, '0');
+      mm = String(p2).padStart(2, '0');
+    }
+    return `${dd}/${mm}/${yyyy}`;
+  }
 
   const parsed = new Date(text);
-  if (!isNaN(parsed.getTime())) {
+  if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 1900 && parsed.getFullYear() < 2100) {
+    try {
+      const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      }).formatToParts(parsed);
+      const dd = parts.find((p) => p.type === 'day')?.value;
+      const mm = parts.find((p) => p.type === 'month')?.value;
+      const yyyy = parts.find((p) => p.type === 'year')?.value;
+      if (dd && mm && yyyy) return `${dd}/${mm}/${yyyy}`;
+    } catch (e) {}
     const day = String(parsed.getDate()).padStart(2, '0');
     const month = String(parsed.getMonth() + 1).padStart(2, '0');
     const year = parsed.getFullYear();
@@ -693,7 +745,8 @@ export async function generateRecordPdfBuffer(sheetName, headers, values) {
       doc.rect(margin, curY, 180, rowHeight).strokeColor('#e2e8f0').lineWidth(0.5).stroke();
 
       doc.fontSize(8.5).fillColor('#334155').font('Helvetica-Bold').text(header, margin + 6, curY + 6, { width: 168 });
-      doc.fontSize(8.5).fillColor('#0f172a').font('Helvetica').text(String(val), margin + 188, curY + 6, { width: contentWidth - 196 });
+      const displayVal = /(date|dob|timestamp|createdat)/i.test(header) ? (formatVoucherDate(val) || String(val)) : String(val);
+      doc.fontSize(8.5).fillColor('#0f172a').font('Helvetica').text(displayVal, margin + 188, curY + 6, { width: contentWidth - 196 });
 
       curY += rowHeight;
     });

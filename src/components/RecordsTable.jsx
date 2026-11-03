@@ -24,6 +24,7 @@ import {
   ChevronsRight,
   Repeat
 } from 'lucide-react';
+import { formatDisplayDate, isDateHeader } from '../utils/dateUtils';
 
 export default function RecordsTable({
   headers,
@@ -244,7 +245,7 @@ export default function RecordsTable({
             <div className="json-card-title">Installments ({items.length})</div>
             {items.slice(0, 3).map((it, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
-                <span>{it.date || '-'}</span>
+                <span>{formatDisplayDate(it.date) || '-'}</span>
                 <strong>₹{Number(it.amount || 0).toLocaleString('en-IN')}</strong>
               </div>
             ))}
@@ -268,6 +269,12 @@ export default function RecordsTable({
     ) {
       const num = parseFloat(strVal.replace(/,/g, ''));
       return <strong>₹{num.toLocaleString('en-IN')}</strong>;
+    }
+
+    // Date formatting (DD/MM/YYYY) for date fields and timestamp strings
+    if (isDateHeader(header) || /^\d{4}[-\/]\d{2}[-\/]\d{2}/.test(strVal)) {
+      const formatted = formatDisplayDate(strVal);
+      return <span>{formatted || strVal}</span>;
     }
 
     return <span>{strVal}</span>;
@@ -419,7 +426,7 @@ export default function RecordsTable({
                   {dateStr && (
                     <div className="info-item">
                       <span className="info-label"><Calendar size={11} /> {isAdmissionsLike ? 'Admission Date' : 'Enquiry Date'}</span>
-                      <strong className="info-val">{dateStr}</strong>
+                      <strong className="info-val">{formatDisplayDate(dateStr) || dateStr}</strong>
                     </div>
                   )}
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Save } from 'lucide-react';
+import { formatDisplayDate, toInputDateValue } from '../utils/dateUtils';
 
 export default function EditRecordModal({
   isOpen,
@@ -53,7 +54,7 @@ export default function EditRecordModal({
             : [parsed];
         setInstallmentRows(
           arr.map((it) => ({
-            date: it.date || '',
+            date: toInputDateValue(it.date) || it.date || '',
             amount: it.amount || ''
           }))
         );
@@ -262,7 +263,7 @@ export default function EditRecordModal({
                             <input
                               type="date"
                               className="form-input"
-                              value={instRow.date}
+                              value={toInputDateValue(instRow.date)}
                               onChange={(e) => updateInstallmentRow(iIdx, 'date', e.target.value)}
                             />
                             <input
@@ -300,9 +301,14 @@ export default function EditRecordModal({
                     type={isDate ? 'date' : isNumber ? 'number' : 'text'}
                     step={isNumber ? 'any' : undefined}
                     className="form-input"
-                    value={val}
+                    value={isDate ? toInputDateValue(val) : val}
                     onChange={(e) => handleFieldChange(idx, e.target.value)}
                   />
+                  {isDate && val && (
+                    <span style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', display: 'block' }}>
+                      Display: {formatDisplayDate(val)}
+                    </span>
+                  )}
                 </div>
               );
             })}

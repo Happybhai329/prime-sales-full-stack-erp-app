@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Loader2
 } from 'lucide-react';
+import { formatDisplayDate, toInputDateValue } from '../utils/dateUtils';
 
 export default function AdmissionRenewalModal({
   isOpen,
@@ -135,7 +136,7 @@ export default function AdmissionRenewalModal({
     setMobile(mob);
 
     setEmail(raw[10] || raw[38] || '');
-    setDob(raw[8] || '');
+    setDob(toInputDateValue(raw[8]) || raw[8] || '');
     setCaste(raw[11] || raw[37] || '');
 
     // Promoted class estimation (e.g. 6 -> 7)
@@ -735,6 +736,11 @@ export default function AdmissionRenewalModal({
                           }}
                           style={{ width: '100%', padding: '4px 6px', borderRadius: 4, border: '1px solid #cbd5e1', fontSize: 11 }}
                         />
+                        {inst.date && (
+                          <div style={{ fontSize: '10px', color: '#64748b', marginTop: 2, fontWeight: 500 }}>
+                            Due: {formatDisplayDate(inst.date)}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
