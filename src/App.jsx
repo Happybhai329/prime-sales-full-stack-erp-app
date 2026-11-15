@@ -85,9 +85,21 @@ export default function App() {
         setSyncStatus(data.sync);
         if (data.sessions && data.sessions.length > 0) {
           setSessions(data.sessions);
+          // If selected session does not exist on server, auto-recover to current/first session
+          const sessionExists = data.sessions.some((s) => s.name === selectedSession);
+          if (!sessionExists) {
+            const fallback =
+              data.selectedSession ||
+              (typeof data.currentSession === 'string' ? data.currentSession : data.currentSession?.name) ||
+              data.sessions[0].name ||
+              '2026';
+            setSelectedSession(fallback);
+            localStorage.setItem('prime_selected_session', fallback);
+          }
         }
-        if (data.currentSession?.name) {
-          setCurrentSession(data.currentSession.name);
+        if (data.currentSession) {
+          const cName = typeof data.currentSession === 'object' ? data.currentSession.name : data.currentSession;
+          setCurrentSession(cName || '2026');
         }
       }
     } catch (err) {
@@ -113,9 +125,13 @@ export default function App() {
         const res = await fetch(`/api/records?${queryParams.toString()}`);
         const data = await res.json();
 
-        setHeaders(data.headers || []);
-        setRows(data.rows || []);
-        setTotalCount(data.totalCount || 0);
+        if (res.ok && data && (data.rows || data.headers)) {
+          setHeaders(data.headers || []);
+          setRows(data.rows || []);
+          setTotalCount(data.totalCount || 0);
+        } else {
+          showToast(data.error || 'Failed to load records from server', 'error');
+        }
       } catch (err) {
         console.error('Failed to fetch records:', err);
         showToast('Error loading records', 'error');

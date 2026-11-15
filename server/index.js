@@ -5,7 +5,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
-import { initDatabase, query } from './db.js';
+import { initDatabase, query, getDbMode } from './db.js';
 import * as sheets from './googleSheets.js';
 import {
   triggerSync,
@@ -318,17 +318,21 @@ app.get('/api/records', async (req, res) => {
     // Conversions tab filter
     if (tab === 'conversions') {
       const matchedIds = await getMatchedConversionIds(sName);
-      if (matchedIds.length === 0) {
+      const cleanIds = (matchedIds || [])
+        .map(Number)
+        .filter((n) => Number.isInteger(n) && n > 0);
+
+      if (cleanIds.length === 0) {
         return res.json({ headers, rows: [], totalCount: 0, session: sName });
       }
-      params.push(matchedIds);
-      // In PG we use = ANY($1), in SQLite fallback we can use IN (...)
-      const dbIsPg = getSyncStatus().status !== 'sqlite';
-      whereClauses.push(
-        dbIsPg
-          ? `row_number = ANY($${params.length})`
-          : `row_number IN (${matchedIds.join(',')})`
-      );
+
+      const dbIsPg = getDbMode() === 'pg';
+      if (dbIsPg) {
+        params.push(cleanIds);
+        whereClauses.push(`row_number = ANY($${params.length})`);
+      } else {
+        whereClauses.push(`row_number IN (${cleanIds.join(',')})`);
+      }
     }
 
     // Program filter

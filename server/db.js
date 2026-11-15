@@ -30,6 +30,17 @@ function getOptimizedConnectionString(rawUrl) {
         u.port = '6543';
       }
     }
+    // If using direct Supabase host (db.[ref].supabase.co), convert to transaction pooler
+    // because cloud platforms (such as Render standard services) often lack outgoing IPv6 support
+    if (u.hostname.startsWith('db.') && u.hostname.endsWith('.supabase.co')) {
+      const projectRef = u.hostname.replace(/^db\./, '').replace(/\.supabase\.co$/, '');
+      if (projectRef && !u.username.includes('.')) {
+        console.log(`[DB] Optimizing direct Supabase host to IPv4 Transaction Pooler for project ${projectRef}...`);
+        u.username = `postgres.${projectRef}`;
+        u.hostname = 'aws-0-ap-south-1.pooler.supabase.com';
+        u.port = '6543';
+      }
+    }
     return u.toString();
   } catch (e) {
     return rawUrl;
