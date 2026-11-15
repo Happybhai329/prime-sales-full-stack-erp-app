@@ -135,6 +135,50 @@ export async function ensureSheetExists(spreadsheetId, sheetTitle, headers = [])
 }
 
 /**
+ * Discovers all session tabs existing in the Google Spreadsheet
+ */
+export async function discoverSessionsFromSheets() {
+  const { sheets } = getGoogleClients();
+  try {
+    const res = await sheets.spreadsheets.get({
+      spreadsheetId: ADMISSION_SS_ID,
+      fields: 'sheets.properties.title'
+    });
+    const titles = (res.data.sheets || []).map((s) => s.properties.title);
+    const discovered = [];
+
+    // Base 2026 session
+    discovered.push({
+      name: '2026',
+      admissionsSheet: 'Admissions',
+      inquiriesSheet: 'Enquiries',
+      cancelledSheet: 'Cancelled',
+      isDefault: true
+    });
+
+    // Custom sessions from Admissions_* tabs
+    for (const title of titles) {
+      if (title.startsWith('Admissions_')) {
+        const sName = title.slice('Admissions_'.length).trim();
+        if (sName && sName !== '2026' && !discovered.some((d) => d.name.toLowerCase() === sName.toLowerCase())) {
+          discovered.push({
+            name: sName,
+            admissionsSheet: title,
+            inquiriesSheet: `Enquiries_${sName}`,
+            cancelledSheet: `Cancelled_${sName}`,
+            isDefault: false
+          });
+        }
+      }
+    }
+    return discovered;
+  } catch (err) {
+    console.warn('[GoogleSheets] Could not discover session tabs:', err.message);
+    return [{ name: '2026', admissionsSheet: 'Admissions', inquiriesSheet: 'Enquiries', cancelledSheet: 'Cancelled', isDefault: true }];
+  }
+}
+
+/**
  * Creates dedicated Google Sheet tabs for a new academic session
  */
 export async function createSessionSheets(sessionName) {
@@ -332,6 +376,19 @@ export async function cancelRemoteAdmission(rowNumber, admissionsSheet = ADMISSI
 }
 
 /**
+ * Converts a 0-based column index to A1 notation column letter (e.g. 0 -> 'A', 25 -> 'Z', 26 -> 'AA', 35 -> 'AJ')
+ */
+export function indexToColLetter(index) {
+  let temp = index;
+  let letter = '';
+  while (temp >= 0) {
+    letter = String.fromCharCode((temp % 26) + 65) + letter;
+    temp = Math.floor(temp / 26) - 1;
+  }
+  return letter;
+}
+
+/**
  * Updates VoucherStatus and VoucherPDFLink in Admissions sheet
  */
 export async function updateRemoteVoucherStatus(rowNumber, status, pdfUrl, sheetName = ADMISSIONS_SHEET_NAME) {
@@ -353,7 +410,7 @@ export async function updateRemoteVoucherStatus(rowNumber, status, pdfUrl, sheet
 
   const updates = [];
   if (statusIdx !== -1) {
-    const colLetter = String.fromCharCode(65 + statusIdx);
+    const colLetter = indexToColLetter(statusIdx);
     updates.push({
       range: `${sheetName}!${colLetter}${rowNumber}`,
       values: [[status]]
@@ -361,7 +418,7 @@ export async function updateRemoteVoucherStatus(rowNumber, status, pdfUrl, sheet
   }
 
   if (pdfIdx !== -1 && pdfUrl != null) {
-    const colLetter = String.fromCharCode(65 + pdfIdx);
+    const colLetter = indexToColLetter(pdfIdx);
     updates.push({
       range: `${sheetName}!${colLetter}${rowNumber}`,
       values: [[pdfUrl]]

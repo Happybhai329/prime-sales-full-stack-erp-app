@@ -194,7 +194,34 @@ export async function triggerSync() {
       );
     }
 
-    // 2. Fetch all registered Academic Sessions
+    // 2. Auto-discover all sessions from Google Sheets and ensure registered in DB
+    try {
+      const discoveredSessions = await sheets.discoverSessionsFromSheets();
+      for (const ds of discoveredSessions) {
+        const dbIsPg = getDbMode() === 'pg';
+        if (dbIsPg) {
+          await query(
+            `INSERT INTO prime_sessions (name, is_current, admissions_sheet_name, inquiries_sheet_name, cancelled_sheet_name)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (name) DO UPDATE SET
+               admissions_sheet_name = EXCLUDED.admissions_sheet_name,
+               inquiries_sheet_name = EXCLUDED.inquiries_sheet_name,
+               cancelled_sheet_name = EXCLUDED.cancelled_sheet_name`,
+            [ds.name, ds.isDefault ? true : false, ds.admissionsSheet, ds.inquiriesSheet, ds.cancelledSheet]
+          );
+        } else {
+          await query(
+            `INSERT OR IGNORE INTO prime_sessions (name, is_current, admissions_sheet_name, inquiries_sheet_name, cancelled_sheet_name)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [ds.name, ds.isDefault ? 1 : 0, ds.admissionsSheet, ds.inquiriesSheet, ds.cancelledSheet]
+          );
+        }
+      }
+    } catch (discErr) {
+      console.warn('[SyncEngine] Session discovery sync error:', discErr.message);
+    }
+
+    // Fetch all registered Academic Sessions
     let sessions = [];
     try {
       const sRes = await query('SELECT * FROM prime_sessions ORDER BY id ASC');
