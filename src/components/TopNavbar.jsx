@@ -42,7 +42,7 @@ export default function TopNavbar({
     const urls = {
       admission: `/admission-form${sessionParam}`,
       enquiry: `/enquiry-form${sessionParam}`,
-      studentReport: 'https://prime-student-report-dcbz.onrender.com'
+      studentReport: 'https://prime-student-report-tmaq.onrender.com'
     };
     if (urls[type]) window.open(urls[type], '_blank', 'noopener,noreferrer');
   };
